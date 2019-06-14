@@ -331,7 +331,6 @@ namespace eosio { namespace chain { namespace wasm_injections {
          INSERT_INJECTED(const_inst);
          INSERT_INJECTED(add_inst);
          INSERT_INJECTED(set_global_inst);
-         INSERT_INJECTED(call_checktime);
 
 #undef INSERT_INJECTED
       }
@@ -754,7 +753,7 @@ namespace eosio { namespace chain { namespace wasm_injections {
 
 
    struct post_op_injectors : wasm_ops::op_types<pass_injector> {
-      using loop_t   = wasm_ops::loop        <checktime_injection>;
+      //using loop_t   = wasm_ops::loop        <checktime_injection>;
       using call_t   = wasm_ops::call        <fix_call_index>;
    };
 
@@ -815,7 +814,7 @@ namespace eosio { namespace chain { namespace wasm_injections {
 
                wasm_ops::op_types<>::call_t chktm; 
                chktm.field = injector_utils::injected_index_mapping.find(checktime_injection::chktm_idx)->second;
-               chktm.pack(&post_code);
+               //chktm.pack(&post_code);
 
                while ( post_decoder ) {
                   auto op = post_decoder.decodeOp();
