@@ -57,8 +57,13 @@ add_library( eosio_chain
              ${HEADERS}
              )
 
+if (CMAKE_BUILD_TYPE STREQUAL "Debug")
+else()
+      set(MOVEMV_LIB "${CMAKE_SOURCE_DIR}/externals/libra/target/release/libvm_move${CMAKE_SHARED_LIBRARY_SUFFIX}")
+endif ()
+
 target_link_libraries( eosio_chain fc chainbase Logging IR WAST WASM Runtime
-                       softfloat builtins wabt eosiolib_native
+                       softfloat builtins wabt eosiolib_native ${MOVEMV_LIB}
                      )
 target_include_directories( eosio_chain
                             PUBLIC "${CMAKE_CURRENT_SOURCE_DIR}/include" "${CMAKE_CURRENT_BINARY_DIR}/include"
@@ -70,6 +75,15 @@ target_include_directories( eosio_chain
                               PRIVATE "${CMAKE_BINARY_DIR}/contracts"
                               PRIVATE ${CMAKE_SOURCE_DIR}/externals/magic_get/include
                         )
+
+add_custom_target(movevm
+      COMMAND cargo build -p vm_move --release
+      WORKING_DIRECTORY ${CMAKE_SOURCE_DIR}/externals/libra
+      DEPENDS ${CMAKE_SOURCE_DIR}/externals/libra/language/vm/vm_runtime/vm_move/build.rs
+)
+
+add_dependencies(movevm eosiolib_native)
+add_dependencies(eosio_chain movevm)
 
 install( TARGETS eosio_chain
    RUNTIME DESTINATION ${CMAKE_INSTALL_FULL_BINDIR}
