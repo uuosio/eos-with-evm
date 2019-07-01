@@ -1,4 +1,8 @@
-add_library(eosiolib_native STATIC 
+configure_file(${CMAKE_CURRENT_SOURCE_DIR}/build.rs.in ${CMAKE_SOURCE_DIR}/externals/libra/language/vm/vm_runtime/vm_move/build.rs)
+configure_file(${CMAKE_CURRENT_SOURCE_DIR}/build.rs.in ${CMAKE_SOURCE_DIR}/externals/libra/language/vm/vm_runtime/build.rs)
+configure_file(${CMAKE_CURRENT_SOURCE_DIR}/build.rs.in ${CMAKE_SOURCE_DIR}/externals/libra/language/stdlib/natives/build.rs)
+
+add_library(eosiolib_native SHARED 
 eosiolib.cpp
 action.cpp
 chain.cpp
