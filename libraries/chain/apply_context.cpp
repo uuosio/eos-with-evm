@@ -29,6 +29,8 @@ static inline void print_debug(account_name receiver, const action_trace& ar) {
            + prefix + ": CONSOLE OUTPUT END   =====================" );
    }
 }
+//vm_api.cpp
+void set_apply_context(apply_context *ctx);
 
 apply_context::apply_context(controller& con, transaction_context& trx_ctx, uint32_t action_ordinal, uint32_t depth)
 :control(con)
@@ -51,6 +53,10 @@ apply_context::apply_context(controller& con, transaction_context& trx_ctx, uint
 
 void apply_context::exec_one()
 {
+   auto cleanup = fc::make_scoped_exit([&](){
+      set_apply_context(nullptr);
+   });
+   set_apply_context(this);
    auto start = fc::time_point::now();
 
    action_receipt r;
