@@ -5,27 +5,27 @@
 extern "C" {
 
 uint32_t read_action_data( void* msg, uint32_t buffer_size ) {
-   auto s = ctx().act.data.size();
+   auto s = ctx().get_action().data.size();
    if( buffer_size == 0 || msg == NULL) return s;
 
    auto copy_size = std::min( (size_t)buffer_size, s );
-   memcpy( msg, ctx().act.data.data(), copy_size );
+   memcpy( msg, ctx().get_action().data.data(), copy_size );
 
    return copy_size;
 
 }
 
 uint32_t action_data_size() {
-   return ctx().act.data.size();
+   return ctx().get_action().data.size();
 }
 
 void get_action_info(uint64_t* account, uint64_t* name) {
-   *account = ctx().act.account;
-   *name = ctx().act.name;
+   *account = ctx().get_action().account;
+   *name = ctx().get_action().name;
 }
 
 uint64_t current_receiver() {
-   return ctx().receiver;
+   return ctx().get_receiver();
 }
 
 void require_recipient( uint64_t name ) {

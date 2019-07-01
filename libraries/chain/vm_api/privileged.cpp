@@ -30,13 +30,13 @@ int64_t set_proposed_producers( char *packed_producer_schedule, uint32_t datalen
 }
 
 bool is_privileged( uint64_t n )  {
-   return ctx().db.get<account_object, by_name>( n ).privileged;
+   return ctx().is_privileged();
 }
 
 void set_privileged( uint64_t n, bool is_priv ) {
-   const auto& a = ctx().db.get<account_object, by_name>( n );
+   const auto& a = ctx().db.get<account_metadata_object, by_name>( n );
    ctx().db.modify( a, [&]( auto& ma ){
-      ma.privileged = is_priv;
+      ma.set_privileged( is_priv );
    });
 }
 

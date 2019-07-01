@@ -52,9 +52,9 @@ void checktime() {
 }
 
 void check_context_free(bool context_free) {
-   if( ctx().context_free )
+   if( ctx().is_context_free() )
       EOS_ASSERT( context_free, unaccessible_api, "only context free api's can be used in this context" );
-   ctx().used_context_free_api |= !context_free;
+//   ctx().used_context_free_api |= !context_free;
 }
 
 bool contracts_console() {
