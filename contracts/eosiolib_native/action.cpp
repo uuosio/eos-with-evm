@@ -51,3 +51,14 @@ account_name current_receiver() {
    return get_vm_api()->current_receiver();
 }
 
+#include <stdio.h>
+
+extern "C" {
+	void say_hello() {
+		printf("hhhhhhhhello,world\n");
+	}
+
+   void checktime() {
+      get_vm_api()->checktime();
+   }
+}
