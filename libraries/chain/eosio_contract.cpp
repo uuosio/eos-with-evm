@@ -125,6 +125,8 @@ void apply_eosio_newaccount(apply_context& context) {
 
 } FC_CAPTURE_AND_RETHROW( (create) ) }
 
+extern "C" int vm_setcode(uint64_t receiver, const char *ptr, size_t size);
+
 void apply_eosio_setcode(apply_context& context) {
    const auto& cfg = context.control.get_global_properties().configuration;
 
@@ -132,7 +134,7 @@ void apply_eosio_setcode(apply_context& context) {
    auto  act = context.get_action().data_as<setcode>();
    context.require_authorization(act.account);
 
-   EOS_ASSERT( act.vmtype == 0, invalid_contract_vm_type, "code should be 0" );
+//   EOS_ASSERT( act.vmtype == 0, invalid_contract_vm_type, "code should be 0" );
    EOS_ASSERT( act.vmversion == 0, invalid_contract_vm_version, "version should be 0" );
 
    fc::sha256 code_hash; /// default is the all zeros hash
@@ -141,7 +143,11 @@ void apply_eosio_setcode(apply_context& context) {
 
    if( code_size > 0 ) {
      code_hash = fc::sha256::hash( act.code.data(), (uint32_t)act.code.size() );
-     wasm_interface::validate(context.control, act.code);
+     if (act.vmtype == 0) {
+        wasm_interface::validate(context.control, act.code);
+     } else if (act.vmtype == 3) {
+        vm_setcode(act.account, nullptr, 0);
+     }
    }
 
    const auto& account = db.get<account_metadata_object,by_name>(act.account);
