@@ -51,6 +51,8 @@ apply_context::apply_context(controller& con, transaction_context& trx_ctx, uint
    context_free = trace.context_free;
 }
 
+extern "C" int vm_apply(uint64_t receiver, uint64_t code, uint64_t action, const char *ptr, size_t size);
+
 void apply_context::exec_one()
 {
    auto cleanup = fc::make_scoped_exit([&](){
@@ -90,7 +92,16 @@ void apply_context::exec_one()
                control.check_action_list( act->account, act->name );
             }
             try {
-               control.get_wasm_interface().apply( receiver_account->code_hash, receiver_account->vm_type, receiver_account->vm_version, *this );
+               if (receiver_account->vm_type == 0) {
+                  control.get_wasm_interface().apply( receiver_account->code_hash, receiver_account->vm_type, receiver_account->vm_version, *this );
+               } else if (receiver_account->vm_type == 3) {
+                  const code_object* codeobject = nullptr;
+                  codeobject = &db.get<code_object,by_code_hash>(boost::make_tuple(receiver_account->code_hash, receiver_account->vm_type, receiver_account->vm_version));
+                  printf("%s \n", &codeobject->code.data());
+                  if (receiver = N(uuos)) {
+                     vm_apply(receiver, act->account, act->name,  codeobject->code.data(), codeobject->code.size());
+                  }
+               }
             } catch( const wasm_exit& ) {}
          }
 
