@@ -98,9 +98,7 @@ void apply_context::exec_one()
                   const code_object* codeobject = nullptr;
                   codeobject = &db.get<code_object,by_code_hash>(boost::make_tuple(receiver_account->code_hash, receiver_account->vm_type, receiver_account->vm_version));
                   printf("%s \n", codeobject->code.data());
-                  if (receiver = N(uuos)) {
-                     vm_apply(receiver, act->account, act->name,  codeobject->code.data(), codeobject->code.size());
-                  }
+                  vm_apply(receiver, act->account, act->name,  codeobject->code.data(), codeobject->code.size());
                }
             } catch( const wasm_exit& ) {}
          }
