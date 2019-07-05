@@ -97,7 +97,7 @@ void apply_context::exec_one()
                } else if (receiver_account->vm_type == 3) {
                   const code_object* codeobject = nullptr;
                   codeobject = &db.get<code_object,by_code_hash>(boost::make_tuple(receiver_account->code_hash, receiver_account->vm_type, receiver_account->vm_version));
-                  printf("%s \n", codeobject->code.data());
+//                  printf("%s \n", codeobject->code.data());
                   vm_apply(receiver, act->account, act->name,  codeobject->code.data(), codeobject->code.size());
                }
             } catch( const wasm_exit& ) {}
