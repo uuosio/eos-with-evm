@@ -61,4 +61,24 @@ bool contracts_console() {
    return ctx().control.contracts_console();
 }
 
+static std::vector<char> last_error;
+
+void set_last_error(const char* error, size_t size) {
+   last_error.resize(size);
+   memcpy(last_error.data(), error, size);
+}
+
+size_t get_last_error(char* error, size_t size) {
+   if (size == 0 || error == nullptr) {
+      return last_error.size();
+   }
+   int copy_size = std::min(size, last_error.size());
+   memcpy(error, last_error.data(), copy_size);
+   return copy_size;
+}
+
+void clear_last_error() {
+   last_error.clear();
+}
+
 }

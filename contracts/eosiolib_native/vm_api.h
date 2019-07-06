@@ -207,6 +207,10 @@ struct vm_api {
    void (*token_issue)( uint64_t to, const char* quantity, size_t size1, const char* memo, size_t size2 );
    void (*token_transfer)( uint64_t from, uint64_t to, const char* quantity, size_t size1, const char* memo, size_t size2 );
 
+   void (*set_last_error)(const char* error, size_t size);
+   size_t (*get_last_error)(char* error, size_t size);
+   void (*clear_last_error)();
+
    char reserved[sizeof(char*)*128]; //for forward compatibility
 };
 

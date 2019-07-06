@@ -33,4 +33,16 @@ uint32_t  now() {
    return (uint32_t)( current_time() / 1000000 );
 }
 
+void set_last_error(const char* error, size_t size) {
+   get_vm_api()->set_last_error(error, size);
+}
+
+size_t get_last_error(char* error, size_t size) {
+   return get_vm_api()->get_last_error(error, size);
+}
+
+void clear_last_error() {
+   get_vm_api()->clear_last_error();
+}
+
 }

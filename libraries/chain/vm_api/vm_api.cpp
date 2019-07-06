@@ -232,6 +232,10 @@ extern "C" void vm_api_init() {
       _vm_api.token_create = token_create;
       _vm_api.token_issue = token_issue;
       _vm_api.token_transfer = token_transfer;
+
+      _vm_api.get_last_error = get_last_error;
+      _vm_api.set_last_error = set_last_error;
+      _vm_api.clear_last_error = clear_last_error;
    }
    vm_register_api(&_vm_api);
 }
