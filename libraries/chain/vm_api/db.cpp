@@ -201,7 +201,6 @@ int get_table_item_count(uint64_t code, uint64_t scope, uint64_t table) {
 #endif
 }
 
-#if 0
 int db_store_i256( uint64_t scope, uint64_t table, uint64_t payer, void* id, int size, const char* buffer, size_t buffer_size ) {
    eosio_assert(size <= sizeof(key256_t), "size of id must be <=32 bytes long!");
    key256_t key = {{0, 0}};
@@ -221,13 +220,13 @@ int db_get_i256( int iterator, char* buffer, size_t buffer_size ) {
    return ctx().db_get_i256(iterator, buffer, buffer_size);
 }
 
-int db_find_i256( uint64_t code, uint64_t scope, uint64_t table, void* id, int size ) {
+int db_find_i256( uint64_t code, uint64_t scope, uint64_t table, void* id, size_t size ) {
    eosio_assert(size <= 32, "size of id must be <=32 bytes long!");
    key256_t key = {{0, 0}};
    memcpy(key.data(),id, size);
    return ctx().db_find_i256(code, scope, table, key);
 }
-
+#if 0
 int db_upperbound_i256( uint64_t code, uint64_t scope, uint64_t table, char* id, int size ) {
    eosio_assert(size <= 32, "size of id must be <=32 bytes long!");
    key256_t key = {{0, 0}};

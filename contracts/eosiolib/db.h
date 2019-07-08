@@ -935,11 +935,11 @@ int32_t db_idx_long_double_upperbound(account_name code, account_name scope, tab
 int32_t db_idx_long_double_end(account_name code, account_name scope, table_name table);
 
 
-int db_store_i256( uint64_t code, uint64_t scope, uint64_t table, uint64_t payer, void* id, int size, const char* buffer, size_t buffer_size );
+int32_t db_store_i256( uint64_t scope, uint64_t table, uint64_t payer, void* id, int size, const char* buffer, size_t buffer_size );
 void db_update_i256( int iterator, uint64_t payer, const char* buffer, size_t buffer_size );
 void db_remove_i256( int iterator );
-int db_get_i256( int iterator, char* buffer, size_t buffer_size );
-int db_find_i256( uint64_t code, uint64_t scope, uint64_t table, void* id, int size );
+int32_t db_get_i256( int iterator, char* buffer, size_t buffer_size );
+int32_t db_find_i256( uint64_t code, uint64_t scope, uint64_t table, void* id, size_t size );
 
 #ifdef __cplusplus
 }

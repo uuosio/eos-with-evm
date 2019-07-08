@@ -79,7 +79,7 @@ struct vm_api {
    void (*db_update_i256)( int iterator, uint64_t payer, const char* buffer, size_t buffer_size );
    void (*db_remove_i256)( int iterator );
    int (*db_get_i256)( int iterator, char* buffer, size_t buffer_size );
-   int (*db_find_i256)( uint64_t code, uint64_t scope, uint64_t table, void* id, int size );
+   int (*db_find_i256)( uint64_t code, uint64_t scope, uint64_t table, void* id, size_t size );
    int (*db_upperbound_i256)( uint64_t code, uint64_t scope, uint64_t table, char* id, int size );
    int (*db_lowerbound_i256)( uint64_t code, uint64_t scope, uint64_t table, char* id, int size );
 

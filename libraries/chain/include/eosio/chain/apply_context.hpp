@@ -525,6 +525,17 @@ class apply_context {
       int  db_upperbound_i64( uint64_t code, uint64_t scope, uint64_t table, uint64_t id );
       int  db_end_i64( uint64_t code, uint64_t scope, uint64_t table );
 
+      int  db_store_i256( uint64_t scope, uint64_t table, const account_name& payer, key256_t& id, const char* buffer, size_t buffer_size );
+      int  db_store_i256( uint64_t code, uint64_t scope, uint64_t table, const account_name& payer, key256_t& id, const char* buffer, size_t buffer_size );
+
+      void db_update_i256( int iterator, account_name payer, const char* buffer, size_t buffer_size , bool check_code=true);
+      void db_remove_i256( int iterator , bool check_code = true);
+      int db_get_i256( int iterator, char* buffer, size_t buffer_size );
+      int db_find_i256( uint64_t code, uint64_t scope, uint64_t table, key256_t& id );
+
+      int db_end_i256( uint64_t code, uint64_t scope, uint64_t table );
+      int db_previous_i256( int iterator, key256_t& primary );
+
    private:
 
       const table_id_object* find_table( name code, name scope, name table );
@@ -581,7 +592,7 @@ class apply_context {
       generic_index<index_long_double_object>                        idx_long_double;
 
    private:
-
+      iterator_cache<key256_value_object>    key256val_cache;
       iterator_cache<key_value_object>    keyval_cache;
       vector< std::pair<account_name, uint32_t> > _notified; ///< keeps track of new accounts to be notifed of current message
       vector<uint32_t>                    _inline_actions; ///< action_ordinals of queued inline actions

@@ -54,7 +54,8 @@ using contract_database_index_set = index_set<
    index128_index,
    index256_index,
    index_double_index,
-   index_long_double_index
+   index_long_double_index,
+   key256_value_index
 >;
 
 class maybe_session {

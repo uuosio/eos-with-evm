@@ -122,6 +122,14 @@ extern "C" void vm_api_init() {
       _vm_api.db_upperbound_i64 = db_upperbound_i64;
       _vm_api.db_end_i64 = db_end_i64;
 
+      _vm_api.db_store_i256 = db_store_i256;
+      _vm_api.db_update_i256 = db_update_i256;
+      _vm_api.db_remove_i256 = db_remove_i256;
+      _vm_api.db_get_i256 = db_get_i256;
+      _vm_api.db_find_i256 = db_find_i256;
+//      _vm_api.db_upperbound_i256 = db_upperbound_i256;
+//      _vm_api.db_lowerbound_i256 = db_lowerbound_i256;
+
       _vm_api.db_idx64_store = db_idx64_store;
       _vm_api.db_idx64_update = db_idx64_update;
 
