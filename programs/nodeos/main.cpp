@@ -78,13 +78,11 @@ enum return_codes {
 extern "C"
 {
    void vm_api_init();
-   int add(int first, int second);
 }
 
 int main(int argc, char** argv)
 {
    vm_api_init();
-   add(1, 2);
    try {
       app().set_version(eosio::nodeos::config::version);
 
