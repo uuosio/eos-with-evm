@@ -85,6 +85,7 @@ plugin = eosio::db_size_api_plugin
 ### Running
 
 ```
+export LD_LIBRARY_PATH=$(rustc --print sysroot)/lib:$LD_LIBRARY_PATH
 cd cd programs
 ./nodeos/nodeos --data-dir data --config-dir config  --contracts-console -e -p eosio --filter-on "*" --verbose-http-errors
 ```
