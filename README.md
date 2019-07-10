@@ -3,13 +3,19 @@
 
 ## Install Dependencies on Ubuntu
 
-#### Install golang
+#### Install Rust
+
+```bash
+curl https://sh.rustup.rs -sSf | sh
 ```
-    sudo apt install golang
+
+#### Install golang
+```bash
+sudo apt install golang
 ```
 
 #### Install Protobuf
-```
+```bash
 wget https://github.com/protocolbuffers/protobuf/releases/download/v3.6.1/protobuf-all-3.6.1.tar.gz
 tar -xf protobuf-all-3.6.1.tar.gz
 cd protobuf-3.6.1
@@ -21,6 +27,12 @@ sudo ldconfig
 ```
 
 ## Install Dependencies on Mac OS X
+
+#### Install Rust
+
+```bash
+curl https://sh.rustup.rs -sSf | sh
+```
 
 #### Install golang
 
