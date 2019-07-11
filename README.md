@@ -91,7 +91,7 @@ cd cd programs
 ```
 
 ### Publish move ir code on test node
-Refer to [move-smart-contract-programming](https://github.com/uuosio/move-smart-contract-programming) for tutorials on write smart contract in move ir and test it.
+Refer to [move-smart-contract-programming](https://github.com/uuosio/move-smart-contract-programming) for tutorials on writing smart contract in move ir and test it.
 
 # Happy coding! Have fun with it!
 
