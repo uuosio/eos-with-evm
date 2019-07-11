@@ -111,6 +111,8 @@ cd cd programs
 ./nodeos/nodeos --data-dir data --config-dir config  --contracts-console -e -p eosio --filter-on "*" --verbose-http-errors
 ```
 
-### Publish move ir code on test chain
+### Publish move ir code on test node
+Refer to [move-smart-contract-programming](https://github.com/uuosio/move-smart-contract-programming) for tutorials on write smart contract in move ir and test it.
 
-to be continue...
+# Happy coding! Have fun with it!
+
