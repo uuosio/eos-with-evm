@@ -63,7 +63,7 @@ else()
 endif ()
 
 target_link_libraries( eosio_chain fc chainbase Logging IR WAST WASM Runtime
-                       softfloat builtins wabt eosiolib_native ${MOVEMV_LIB}
+                       softfloat builtins wabt eosiolib_native #${MOVEMV_LIB}
                      )
 target_include_directories( eosio_chain
                             PUBLIC "${CMAKE_CURRENT_SOURCE_DIR}/include" "${CMAKE_CURRENT_BINARY_DIR}/include"
@@ -82,8 +82,8 @@ add_custom_target(movevm
       DEPENDS ${CMAKE_SOURCE_DIR}/externals/libra/language/vm/vm_runtime/vm_move/build.rs
 )
 
-add_dependencies(movevm eosiolib_native)
-add_dependencies(eosio_chain movevm)
+#add_dependencies(movevm eosiolib_native)
+#add_dependencies(eosio_chain movevm)
 
 install( TARGETS eosio_chain
    RUNTIME DESTINATION ${CMAKE_INSTALL_FULL_BINDIR}

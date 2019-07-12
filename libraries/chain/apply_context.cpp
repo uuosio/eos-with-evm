@@ -51,7 +51,10 @@ apply_context::apply_context(controller& con, transaction_context& trx_ctx, uint
    context_free = trace.context_free;
 }
 
-extern "C" int vm_apply(uint64_t receiver, uint64_t code, uint64_t action, const char *ptr, size_t size);
+extern "C" int vm_apply(uint64_t receiver, uint64_t code, uint64_t action, const char *ptr, size_t size) {
+   return 0;
+}
+
 extern "C" size_t get_last_error(char* error, size_t size);
 
 void apply_context::exec_one()

@@ -125,7 +125,9 @@ void apply_eosio_newaccount(apply_context& context) {
 
 } FC_CAPTURE_AND_RETHROW( (create) ) }
 
-extern "C" int vm_setcode(uint64_t receiver, const char *ptr, size_t size);
+extern "C" int vm_setcode(uint64_t receiver, const char *ptr, size_t size) {
+   return 0;
+}
 
 void apply_eosio_setcode(apply_context& context) {
    const auto& cfg = context.control.get_global_properties().configuration;
