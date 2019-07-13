@@ -51,8 +51,11 @@ apply_context::apply_context(controller& con, transaction_context& trx_ctx, uint
    context_free = trace.context_free;
 }
 
-extern "C" int vm_apply(uint64_t receiver, uint64_t code, uint64_t action, const char *ptr, size_t size);
-extern "C" size_t get_last_error(char* error, size_t size);
+extern "C" {
+   int vm_apply(uint64_t receiver, uint64_t code, uint64_t action, const char *ptr, size_t size);
+   size_t get_last_error(char* error, size_t size);
+   int eos_vm_apply(uint64_t receiver, uint64_t code, uint64_t action, const unsigned char *wasm_code, size_t wasm_code_size);
+}
 
 void apply_context::exec_one()
 {
@@ -108,7 +111,21 @@ void apply_context::exec_one()
                         EOS_ASSERT( ret != -1, exception, "vm_apply return -1,move vm throw an exception: ${error}!", ("error", error));
                      }
                   }
+               } else if (receiver_account->vm_type == 4) {
+                  const code_object* codeobject = nullptr;
+                  codeobject = &db.get<code_object,by_code_hash>(boost::make_tuple(receiver_account->code_hash, receiver_account->vm_type, receiver_account->vm_version));
+//                  int ret = vm_apply(receiver, act->account, act->name,  codeobject->code.data(), codeobject->code.size());
+                  int ret = eos_vm_apply(receiver, act->account, act->name, (unsigned char *)codeobject->code.data(), codeobject->code.size());
+                  if (ret == -1) {
+                     size_t size = get_last_error(nullptr, 0);
+                     if (size) {
+                        std::string error(size, 0);
+                        get_last_error((char *)error.c_str(), size);
+                        EOS_ASSERT( ret != -1, exception, "vm_apply return -1,move vm throw an exception: ${error}!", ("error", error));
+                     }
+                  }
                }
+
             } catch( const wasm_exit& ) {}
          }
 

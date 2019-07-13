@@ -63,7 +63,7 @@ else()
 endif ()
 
 target_link_libraries( eosio_chain fc chainbase Logging IR WAST WASM Runtime
-                       softfloat builtins wabt eosiolib_native ${MOVEMV_LIB}
+                       softfloat builtins wabt eosiolib_native ${MOVEMV_LIB} vm_eos
                      )
 target_include_directories( eosio_chain
                             PUBLIC "${CMAKE_CURRENT_SOURCE_DIR}/include" "${CMAKE_CURRENT_BINARY_DIR}/include"
