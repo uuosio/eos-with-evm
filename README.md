@@ -40,29 +40,8 @@ curl https://sh.rustup.rs -sSf | sh
 brew install golang
 ```
 
-<<<<<<< HEAD
 #### Install protobuf
 
-=======
-#### Ubuntu 18.04 Package Install
-```sh
-$ wget https://github.com/eosio/eos/releases/download/v1.8.1/eosio_1.8.1-1-ubuntu-18.04_amd64.deb
-$ sudo apt install ./eosio_1.8.1-1-ubuntu-18.04_amd64.deb
-```
-#### Ubuntu 16.04 Package Install
-```sh
-$ wget https://github.com/eosio/eos/releases/download/v1.8.1/eosio_1.8.1-1-ubuntu-16.04_amd64.deb
-$ sudo apt install ./eosio_1.8.1-1-ubuntu-16.04_amd64.deb
-```
-#### Ubuntu Package Uninstall
-```sh
-$ sudo apt remove eosio
-```
-#### Centos RPM Package Install
-```sh
-$ wget https://github.com/eosio/eos/releases/download/v1.8.1/eosio-1.8.1-1.el7.x86_64.rpm
-$ sudo yum install ./eosio-1.8.1-1.el7.x86_64.rpm
->>>>>>> eosio/master
 ```
 brew install protobuf
 brew upgrade protobuf
@@ -111,6 +90,8 @@ cd cd programs
 ./nodeos/nodeos --data-dir data --config-dir config  --contracts-console -e -p eosio --filter-on "*" --verbose-http-errors
 ```
 
-### Publish move ir code on test chain
+### Publish move ir code on test node
+Refer to [move-smart-contract-programming](https://github.com/uuosio/move-smart-contract-programming) for tutorials on writing smart contract in move ir and test it.
 
-to be continue...
+# Happy coding! Have fun with it!
+
