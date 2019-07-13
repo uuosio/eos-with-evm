@@ -25,3 +25,6 @@
 	path = externals/libra
 	url = https://github.com/uuosio/libra
 	branch = libra4eos
+[submodule "libraries/eos-vm"]
+	path = libraries/eos-vm
+	url = https://github.com/uuosio/eos-vm

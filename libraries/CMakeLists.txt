@@ -13,6 +13,7 @@ set(BUILD_TOOLS OFF CACHE BOOL "Build wabt tools")
 set(RUN_RE2C OFF CACHE BOOL "Run re2c")
 set(WITH_EXCEPTIONS ON CACHE BOOL "Build with exceptions enabled" FORCE)
 add_subdirectory( wabt )
+add_subdirectory( eos-vm )
 
 set(ENABLE_STATIC ON)
 set(CMAKE_MACOSX_RPATH OFF)
