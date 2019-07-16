@@ -42,8 +42,11 @@ namespace eosio { namespace chain {
             runtime_interface = std::make_unique<webassembly::wavm::wavm_runtime>();
          else if(vm == wasm_interface::vm_type::wabt)
             runtime_interface = std::make_unique<webassembly::wabt_runtime::wabt_runtime>();
-         else
+         else if (vm == wasm_interface::vm_type::eosvm) {
+
+         } else {
             EOS_THROW(wasm_exception, "wasm_interface_impl fall through");
+         }
       }
 
       ~wasm_interface_impl() {
