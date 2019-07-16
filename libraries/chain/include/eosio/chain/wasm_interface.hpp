@@ -73,7 +73,8 @@ namespace eosio { namespace chain {
       public:
          enum class vm_type {
             wavm,
-            wabt
+            wabt,
+            eosvm,
          };
 
          wasm_interface(vm_type vm, const chainbase::database& db);
@@ -99,6 +100,7 @@ namespace eosio { namespace chain {
 
       private:
          unique_ptr<struct wasm_interface_impl> my;
+         vm_type vmtype;
          friend class eosio::chain::webassembly::common::intrinsics_accessor;
    };
 
@@ -108,4 +110,4 @@ namespace eosio{ namespace chain {
    std::istream& operator>>(std::istream& in, wasm_interface::vm_type& runtime);
 }}
 
-FC_REFLECT_ENUM( eosio::chain::wasm_interface::vm_type, (wavm)(wabt) )
+FC_REFLECT_ENUM( eosio::chain::wasm_interface::vm_type, (wavm)(wabt)(eosvm) )

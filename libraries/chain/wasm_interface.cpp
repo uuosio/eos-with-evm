@@ -25,11 +25,16 @@
 #include <fstream>
 #include <string.h>
 
+extern "C" {
+   size_t get_last_error(char* error, size_t size);
+   int eos_vm_apply(uint64_t receiver, uint64_t code, uint64_t action, const unsigned char *wasm_code, size_t wasm_code_size);
+}
+
 namespace eosio { namespace chain {
    using namespace webassembly;
    using namespace webassembly::common;
 
-   wasm_interface::wasm_interface(vm_type vm, const chainbase::database& d) : my( new wasm_interface_impl(vm, d) ) {}
+   wasm_interface::wasm_interface(vm_type vm, const chainbase::database& d) : my( new wasm_interface_impl(vm, d) ), vmtype(vm) {}
 
    wasm_interface::~wasm_interface() {}
 
@@ -70,7 +75,20 @@ namespace eosio { namespace chain {
    }
 
    void wasm_interface::apply( const digest_type& code_hash, const uint8_t& vm_type, const uint8_t& vm_version, apply_context& context ) {
-      my->get_instantiated_module(code_hash, vm_type, vm_version, context.trx_context)->apply(context);
+      if (vmtype == vm_type::eosvm) {
+         const code_object* codeobject = &my->db.get<code_object,by_code_hash>(boost::make_tuple(code_hash, vm_type, vm_version));
+         int ret = eos_vm_apply(context.get_receiver(), context.get_action().account, context.get_action().name, (unsigned char *)codeobject->code.data(), codeobject->code.size());
+         if (ret == -1) {
+            size_t size = get_last_error(nullptr, 0);
+            if (size) {
+               std::string error(size, 0);
+               get_last_error((char *)error.c_str(), size);
+               EOS_ASSERT( ret != -1, exception, "vm_apply return -1,move vm throw an exception: ${error}!", ("error", error));
+            }
+         }
+      } else {
+         my->get_instantiated_module(code_hash, vm_type, vm_version, context.trx_context)->apply(context);
+      }
    }
 
    void wasm_interface::exit() {
