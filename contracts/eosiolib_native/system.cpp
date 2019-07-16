@@ -9,6 +9,10 @@
 
 extern "C" {
 
+void eosio_abort() {
+   get_vm_api()->eosio_abort();
+}
+
 void  eosio_assert( uint32_t test, const char* msg ) {
    get_vm_api()->eosio_assert( test, msg );
 }

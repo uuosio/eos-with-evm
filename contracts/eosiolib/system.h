@@ -12,6 +12,8 @@
 extern "C" {
 #endif
 
+   void eosio_abort();
+
    /**
     * @defgroup systemapi System API
     * @ingroup contractdev
