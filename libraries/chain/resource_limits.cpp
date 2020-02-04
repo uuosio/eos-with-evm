@@ -51,6 +51,10 @@ void resource_limits_manager::add_indices() {
    resource_index_set::add_indices(_db);
 }
 
+void resource_limits_manager::add_indices(chainbase::database& db) {
+   resource_index_set::add_indices(db);
+}
+
 void resource_limits_manager::initialize_database() {
    const auto& config = _db.create<resource_limits_config_object>([](resource_limits_config_object& config){
       // see default settings in the declaration

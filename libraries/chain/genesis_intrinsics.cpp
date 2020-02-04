@@ -170,7 +170,16 @@ const std::vector<const char*> genesis_intrinsics = {
    "memcpy",
    "memmove",
    "memcmp",
-   "memset"
+   "memset",
+   "db_store_i256",
+   "db_update_i256",
+   "db_remove_i256",
+   "db_get_i256",
+   "db_find_i256",
+   "db_previous_i256",
+   "db_next_i256",
+   "db_lowerbound_i256",
+   "db_upperbound_i256",
 };
 
 } } // namespace eosio::chain

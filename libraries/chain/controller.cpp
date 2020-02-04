@@ -34,7 +34,12 @@
 
 #include <new>
 
+void chain_api_set_controller(eosio::chain::controller *_ctrl);
+
 namespace eosio { namespace chain {
+
+void apply_eosio_addaccounts(apply_context&);
+
 
 using resource_limits::resource_limits_manager;
 
@@ -123,7 +128,6 @@ struct building_block {
    vector<transaction_metadata_ptr>      _pending_trx_metas;
    vector<transaction_receipt>           _pending_trx_receipts;
    vector<action_receipt>                _actions;
-   optional<checksum256_type>            _transaction_mroot;
 };
 
 struct assembled_block {
@@ -226,6 +230,7 @@ struct controller_impl {
    reset_new_handler              rnh; // placed here to allow for this to be set before constructing the other fields
    controller&                    self;
    chainbase::database            db;
+   chainbase::database            ro_db;
    chainbase::database            reversible_blocks; ///< a special database to persist blocks that have successfully been applied but are still reversible
    block_log                      blog;
    optional<pending_state>        pending;
@@ -245,6 +250,7 @@ struct controller_impl {
    uint32_t                       snapshot_head_block = 0;
    named_thread_pool              thread_pool;
    platform_timer                 timer;
+   std::shared_ptr<transaction_context> ctx;
 #if defined(EOSIO_EOS_VM_RUNTIME_ENABLED) || defined(EOSIO_EOS_VM_JIT_RUNTIME_ENABLED)
    vm::wasm_allocator                 wasm_alloc;
 #endif
@@ -295,6 +301,25 @@ struct controller_impl {
    void set_apply_handler( account_name receiver, account_name contract, action_name action, apply_handler v ) {
       apply_handlers[receiver][make_pair(contract,action)] = v;
    }
+   
+   transaction_context& get_context() {
+      if (!ctx.get()) {
+         fc::time_point deadline = fc::time_point::maximum();
+         fc::time_point start = fc::time_point::now();
+
+         signed_transaction* trx = new signed_transaction();
+         // Deliver onerror action containing the failed deferred transaction directly back to the sender.
+         trx->actions.emplace_back( vector<permission_level>{}, name(0), name(0), vector<char>() );
+         trx->expiration = time_point_sec();
+         trx->ref_block_num = 0;
+         trx->ref_block_prefix = 0;
+
+         transaction_checktime_timer* trx_timer = new transaction_checktime_timer(timer);
+         ctx = std::make_shared<transaction_context>( self, *trx, trx->id(), std::move(*trx_timer), start, true );
+         ctx->schedule_action( trx->actions.back(), name(0), false, 0, 0 );
+      }
+      return *ctx;
+   }
 
    controller_impl( const controller::config& cfg, controller& s, protocol_feature_set&& pfs, const chain_id_type& chain_id )
    :rnh(),
@@ -302,6 +327,9 @@ struct controller_impl {
     db( cfg.state_dir,
         cfg.read_only ? database::read_only : database::read_write,
         cfg.state_size, false, cfg.db_map_mode, cfg.db_hugepage_paths ),
+    ro_db( cfg.state_dir,
+        database::read_only,
+        cfg.state_size, true, cfg.db_map_mode, cfg.db_hugepage_paths ),
     reversible_blocks( cfg.blocks_dir/config::reversible_blocks_dir_name,
         cfg.read_only ? database::read_only : database::read_write,
         cfg.reversible_cache_size, false, cfg.db_map_mode, cfg.db_hugepage_paths ),
@@ -325,8 +353,11 @@ struct controller_impl {
       set_activation_handler<builtin_protocol_feature_t::preactivate_feature>();
       set_activation_handler<builtin_protocol_feature_t::replace_deferred>();
       set_activation_handler<builtin_protocol_feature_t::get_sender>();
+
       set_activation_handler<builtin_protocol_feature_t::webauthn_key>();
       set_activation_handler<builtin_protocol_feature_t::wtmsig_block_signatures>();
+      set_activation_handler<builtin_protocol_feature_t::action_return_value>();
+      set_activation_handler<builtin_protocol_feature_t::ethereum_vm>();
 
       self.irreversible_block.connect([this](const block_state_ptr& bsp) {
          wasmif.current_lib(bsp->block_num);
@@ -771,10 +802,20 @@ struct controller_impl {
       controller_index_set::add_indices(db);
       contract_database_index_set::add_indices(db);
 
+      db.add_index<key256_value_index>();
+
       authorization.add_indices();
       resource_limits.add_indices();
-   }
 
+      controller_index_set::add_indices(ro_db);
+      contract_database_index_set::add_indices(ro_db);
+      if (conf.uuos_mainnet) {
+         ro_db.add_index<key256_value_index>();
+      }
+      authorization.add_indices(ro_db);
+      resource_limits.add_indices(ro_db);
+
+   }
    void clear_all_undo() {
       // Rewind the database to the last irreversible block
       db.undo_all();
@@ -1503,6 +1544,48 @@ struct controller_impl {
          return trace;
       } FC_CAPTURE_AND_RETHROW((trace))
    } /// push_transaction
+
+   transaction_trace_ptr call_contract(uint64_t contract, uint64_t action, const vector<char>& binargs)
+   {
+      fc::time_point deadline = fc::time_point::maximum();
+      fc::time_point start = fc::time_point::now();
+      uint32_t cpu_time_to_bill_us = 0; // only set on failure
+      uint32_t billed_cpu_time_us = 100000;
+      bool explicit_billed_cpu_time = false;
+      bool enforce_whiteblacklist = true;
+
+      signed_transaction trx;
+      // Deliver onerror action containing the failed deferred transaction directly back to the sender.
+      trx.actions.emplace_back( vector<permission_level>{{name(contract), N(active)}}, name(contract), name(action), binargs );
+      trx.expiration = time_point_sec();
+      trx.ref_block_num = 0;
+      trx.ref_block_prefix = 0;
+
+      transaction_checktime_timer trx_timer(timer);
+      transaction_context trx_context( self, trx, trx.id(), std::move(trx_timer), start, true );
+      trx_context.deadline = deadline;
+      trx_context.explicit_billed_cpu_time = explicit_billed_cpu_time;
+      trx_context.billed_cpu_time_us = billed_cpu_time_us;
+      trx_context.enforce_whiteblacklist = enforce_whiteblacklist;
+      transaction_trace_ptr trace = trx_context.trace;
+      try {
+         trx_context.init_for_implicit_trx();
+         trx_context.execute_action( trx_context.schedule_action( trx.actions.back(), name(contract), false, 0, 0 ), 0 );
+         trx_context.finalize(); // Automatically rounds up network and CPU usage in trace and bills payers if successful
+         return trace;
+      } catch( const disallowed_transaction_extensions_bad_block_exception& ) {
+         throw;
+      } catch( const protocol_feature_bad_block_exception& ) {
+         throw;
+      } catch( const fc::exception& e ) {
+         throw;
+         cpu_time_to_bill_us = trx_context.update_billed_cpu_time( fc::time_point::now() );
+         trace->error_code = controller::convert_exception_to_error_code( e );
+         trace->except = e;
+         trace->except_ptr = std::current_exception();
+      }
+      return trace;
+   }
 
    void start_block( block_timestamp_type when,
                      uint16_t confirm_block_count,
@@ -2422,11 +2505,13 @@ const protocol_feature_manager& controller::get_protocol_feature_manager()const
 controller::controller( const controller::config& cfg, const chain_id_type& chain_id )
 :my( new controller_impl( cfg, *this, protocol_feature_set{}, chain_id ) )
 {
+   chain_api_set_controller(this);
 }
 
 controller::controller( const config& cfg, protocol_feature_set&& pfs, const chain_id_type& chain_id )
 :my( new controller_impl( cfg, *this, std::move(pfs), chain_id ) )
 {
+   chain_api_set_controller(this);
 }
 
 controller::~controller() {
@@ -2458,6 +2543,18 @@ void controller::startup( std::function<bool()> shutdown ) {
 const chainbase::database& controller::db()const { return my->db; }
 
 chainbase::database& controller::mutable_db()const { return my->db; }
+
+chainbase::database& controller::get_db(bool read_only)const {
+   if (read_only) {
+      return my->ro_db;
+   } else {
+      return my->db; 
+   }
+}
+
+transaction_context& controller::get_context() {
+   return my->get_context();
+}
 
 const fork_database& controller::fork_db()const { return my->fork_db; }
 
@@ -3210,6 +3307,9 @@ const flat_set<account_name> &controller::get_resource_greylist() const {
    return  my->conf.resource_greylist;
 }
 
+const controller::config& controller::get_config() const {
+   return  my->conf;
+}
 
 void controller::add_to_ram_correction( account_name account, uint64_t ram_bytes ) {
    if( auto ptr = my->db.find<account_ram_correction_object, by_name>( account ) ) {
@@ -3222,6 +3322,10 @@ void controller::add_to_ram_correction( account_name account, uint64_t ram_bytes
          rco.ram_correction = ram_bytes;
       } );
    }
+}
+
+transaction_trace_ptr controller::call_contract(uint64_t contract, uint64_t action, const vector<char>& binargs) {
+   return my->call_contract(contract, action, binargs);
 }
 
 bool controller::all_subjective_mitigations_disabled()const {
@@ -3321,6 +3425,13 @@ void controller_impl::on_activation<builtin_protocol_feature_t::replace_deferred
 }
 
 template<>
+void controller_impl::on_activation<builtin_protocol_feature_t::ethereum_vm>() {
+   db.modify( db.get<protocol_state_object>(), [&]( auto& ps ) {
+      add_intrinsic_to_whitelist( ps.whitelisted_intrinsics, "evm_execute" );
+   } );
+}
+
+template<>
 void controller_impl::on_activation<builtin_protocol_feature_t::webauthn_key>() {
    db.modify( db.get<protocol_state_object>(), [&]( auto& ps ) {
       ps.num_supported_key_types = 3;
@@ -3334,7 +3445,12 @@ void controller_impl::on_activation<builtin_protocol_feature_t::wtmsig_block_sig
    } );
 }
 
-
+template<>
+void controller_impl::on_activation<builtin_protocol_feature_t::action_return_value>() {
+   db.modify( db.get<protocol_state_object>(), [&]( auto& ps ) {
+      add_intrinsic_to_whitelist( ps.whitelisted_intrinsics, "set_action_return_value" );
+   } );
+}
 
 /// End of protocol feature activation handlers
 

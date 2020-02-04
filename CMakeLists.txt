@@ -1,6 +1,6 @@
 cmake_minimum_required( VERSION 3.8 )
 
-project( EOSIO )
+project( UUOSIO )
 include(CTest) # suppresses DartConfiguration.tcl error
 enable_testing()
 
@@ -9,6 +9,7 @@ if ("${CMAKE_INSTALL_PREFIX}" STREQUAL "/usr/local")
 endif()
 
 list(APPEND CMAKE_MODULE_PATH "${CMAKE_CURRENT_SOURCE_DIR}/CMakeModules")
+list(APPEND CMAKE_MODULE_PATH "${CMAKE_SOURCE_DIR}/externals/aleth/cmake")
 
 if (UNIX AND APPLE)
    list(APPEND CMAKE_PREFIX_PATH "/usr/local/opt/gettext")
@@ -102,7 +103,23 @@ endif()
 set( Boost_USE_STATIC_LIBS ON CACHE STRING "ON or OFF" )
 # Most boost deps get implictly picked up via fc, as just about everything links to fc. In addition we pick up
 # the pthread dependency through fc.
-find_package(Boost 1.67 REQUIRED COMPONENTS program_options unit_test_framework)
+#find_package(Boost 1.67 REQUIRED COMPONENTS program_options unit_test_framework)
+
+find_package(PythonLibs 3.7 REQUIRED)
+message(STATUS "PYTHON_LIBRARIES = ${PYTHON_LIBRARIES}")
+message(STATUS "PYTHON_EXECUTABLE = ${PYTHON_EXECUTABLE}")
+message(STATUS "PYTHON_INCLUDE_DIRS = ${PYTHON_INCLUDE_DIRS}")
+
+
+find_package(Boost 1.67 REQUIRED COMPONENTS
+    date_time
+    filesystem
+    system
+    program_options
+    chrono
+    unit_test_framework
+    iostreams)
+
 
 if( APPLE AND UNIX )
 # Apple Specific Options Here
@@ -156,6 +173,10 @@ endif()
 
 message( STATUS "Using '${EOSIO_ROOT_KEY}' as public key for 'eosio' account" )
 
+set(EOSIO_COMPILE_TEST_CONTRACTS TRUE)
+
+add_subdirectory( externals )
+add_subdirectory( contracts )
 add_subdirectory( libraries )
 add_subdirectory( plugins )
 add_subdirectory( programs )
@@ -164,9 +185,66 @@ add_subdirectory( unittests )
 add_subdirectory( tests )
 add_subdirectory( tools )
 
+option(DISABLE_WASM_SPEC_TESTS "disable building of wasm spec unit tests" OFF)
+
 if (NOT DISABLE_WASM_SPEC_TESTS)
 add_subdirectory( eosio-wasm-spec-tests/generated-tests )
 endif()
+
+if (APPLE)
+else()
+    target_compile_options(builtins PRIVATE -fPIC)
+    target_compile_options(softfloat PRIVATE -fPIC)
+    target_compile_options(Logging PRIVATE -fPIC)
+    target_compile_options(IR PRIVATE -fPIC)
+    target_compile_options(WAST PRIVATE -fPIC)
+    target_compile_options(WASM PRIVATE -fPIC)
+    target_compile_options(Runtime PRIVATE -fPIC)
+#    target_compile_options(python3-ss PRIVATE -fPIC)
+#    target_compile_options(Emscripten PRIVATE -fPIC)
+    target_compile_options(Platform PRIVATE -fPIC)
+    target_compile_options(wabt PRIVATE -fPIC)
+#    target_compile_options(secp256k1 PRIVATE -fPIC)
+#    target_compile_options(chainbase PRIVATE -fPIC)
+    target_compile_options(frozen PRIVATE -fPIC)
+    target_compile_options(vm_api4c PRIVATE -fPIC)
+    target_compile_options(fc PRIVATE -fPIC)
+    target_compile_options(boost_1_67_0 PRIVATE -fPIC)
+    target_compile_options(eosiolib.native PRIVATE -fPIC)
+    target_compile_options(eth_account PRIVATE -fPIC)
+
+
+target_compile_options(chainbase PRIVATE -fPIC)
+target_compile_options(appbase PRIVATE -fPIC)
+target_compile_options(login_plugin PRIVATE -fPIC)
+target_compile_options(history_plugin PRIVATE -fPIC)
+target_compile_options(state_history_plugin PRIVATE -fPIC)
+target_compile_options(history_api_plugin PRIVATE -fPIC)
+target_compile_options(chain_api_plugin PRIVATE -fPIC)
+target_compile_options(net_plugin PRIVATE -fPIC)
+target_compile_options(net_api_plugin PRIVATE -fPIC)
+target_compile_options(txn_test_gen_plugin PRIVATE -fPIC)
+target_compile_options(db_size_api_plugin PRIVATE -fPIC)
+target_compile_options(producer_api_plugin PRIVATE -fPIC)
+target_compile_options(test_control_plugin PRIVATE -fPIC)
+target_compile_options(test_control_api_plugin PRIVATE -fPIC)
+target_compile_options(debug_api_plugin PRIVATE -fPIC)
+target_compile_options(contract_api_plugin PRIVATE -fPIC)
+target_compile_options(action_publisher_plugin PRIVATE -fPIC)
+target_compile_options(chain_plugin PRIVATE -fPIC)
+target_compile_options(http_plugin PRIVATE -fPIC)
+target_compile_options(producer_plugin PRIVATE -fPIC)
+target_compile_options(http_client_plugin PRIVATE -fPIC)
+target_compile_options(eosio_chain PRIVATE -fPIC)
+target_compile_options(eosio_testing PRIVATE -fPIC)
+target_compile_options(secp256k1 PRIVATE -fPIC)
+target_compile_options(vm_manager PRIVATE -fPIC)
+target_compile_options(wasm2c_contracts PRIVATE -fPIC)
+target_compile_options(version PRIVATE -fPIC)
+endif()
+
+add_dependencies(test_contracts_project contracts_project)
+add_dependencies(chainbase boost_1_67_0)
 
 install_directory_permissions(DIRECTORY ${CMAKE_INSTALL_FULL_SYSCONFDIR}/eosio)
 
