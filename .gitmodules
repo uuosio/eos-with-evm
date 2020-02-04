@@ -24,3 +24,12 @@
 [submodule "eosio-wasm-spec-tests"]
 	path = eosio-wasm-spec-tests
 	url = https://github.com/EOSIO/eosio-wasm-spec-tests
+[submodule "externals/boost"]
+	path = externals/boost
+	url = https://github.com/uuosio/boost
+[submodule "externals/magic_get"]
+	path = externals/magic_get
+	url = https://github.com/EOSIO/magic_get
+[submodule "externals/aleth"]
+	path = externals/aleth
+	url = https://github.com/learnforpractice/aleth

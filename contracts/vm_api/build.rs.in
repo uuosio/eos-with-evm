@@ -1,0 +1,10 @@
+// build.rs
+
+use std::env;
+
+fn main() {
+    println!("cargo:rustc-link-search={}", "${CMAKE_BINARY_DIR}/libraries/eos-vm/tools"); // the "-L" flag
+    println!("cargo:rustc-link-lib=vm_eos"); // the "-l" flag
+    println!("cargo:rustc-link-search={}", "${CMAKE_CURRENT_BINARY_DIR}"); // the "-L" flag
+    println!("cargo:rustc-link-lib=vm_api"); // the "-l" flag
+}
