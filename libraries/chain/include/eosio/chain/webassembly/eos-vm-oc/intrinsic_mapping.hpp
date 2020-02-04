@@ -248,7 +248,19 @@ constexpr auto intrinsic_table = boost::hana::make_tuple(
    "eosio_injection._eosio_i32_to_f64"_s,
    "eosio_injection._eosio_i64_to_f64"_s,
    "eosio_injection._eosio_ui32_to_f64"_s,
-   "eosio_injection._eosio_ui64_to_f64"_s
+   "eosio_injection._eosio_ui64_to_f64"_s,
+   "env.set_action_return_value"_s,
+   "env.evm_execute"_s,
+   "env.db_store_i256"_s,
+   "env.db_update_i256"_s,
+   "env.db_remove_i256"_s,
+   "env.db_get_i256"_s,
+   "env.db_next_i256"_s,
+   "env.db_previous_i256"_s,
+   "env.db_find_i256"_s,
+   "env.db_lowerbound_i256"_s,
+   "env.db_upperbound_i256"_s,
+   "env.db_end_i256"_s,
 );
 
 }}}

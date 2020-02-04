@@ -21,6 +21,7 @@ namespace boost { namespace asio {
 namespace eosio { namespace chain {
 
    class authorization_manager;
+   class transaction_context;
 
    namespace resource_limits {
       class resource_limits_manager;
@@ -255,6 +256,7 @@ namespace eosio { namespace chain {
          void remove_resource_greylist(const account_name &name);
          bool is_resource_greylisted(const account_name &name) const;
          const flat_set<account_name> &get_resource_greylist() const;
+         const controller::config& get_config() const;
 
          void validate_expiration( const transaction& t )const;
          void validate_tapos( const transaction& t )const;
@@ -292,6 +294,9 @@ namespace eosio { namespace chain {
 #if defined(EOSIO_EOS_VM_RUNTIME_ENABLED) || defined(EOSIO_EOS_VM_JIT_RUNTIME_ENABLED)
          vm::wasm_allocator&  get_wasm_allocator();
 #endif
+
+         transaction_trace_ptr call_contract(uint64_t contract, uint64_t action, const vector<char>& binargs);
+         transaction_context& get_context();
 
          static fc::optional<uint64_t> convert_exception_to_error_code( const fc::exception& e );
 
@@ -347,9 +352,53 @@ namespace eosio { namespace chain {
          friend class transaction_context;
 
          chainbase::database& mutable_db()const;
-
+         chainbase::database& get_db(bool read_only)const;
          std::unique_ptr<controller_impl> my;
 
    };
 
 } }  /// eosio::chain
+
+
+FC_REFLECT(eosio::chain::controller::config, 
+                                    (sender_bypass_whiteblacklist)
+                                    (actor_whitelist)
+                                    (actor_blacklist)
+                                    (contract_whitelist)
+                                    (contract_blacklist)
+                                    (action_blacklist)
+                                    (key_blacklist)
+                                    (blocks_dir)
+                                    (state_dir)
+                                    (state_size)
+                                    (state_guard_size)
+                                    (reversible_cache_size)
+                                    (reversible_guard_size)
+                                    (sig_cpu_bill_pct)
+                                    (thread_pool_size)
+                                    (read_only)
+                                    (force_all_checks)
+                                    (disable_replay_opts)
+                                    (contracts_console)
+                                    (allow_ram_billing_in_notify)
+                                    (disable_all_subjective_mitigations)
+                                    (wasm_runtime)
+                                    (read_mode)
+                                    (block_validation_mode)
+                                    (db_map_mode)
+                                    (db_hugepage_paths)
+                                    (resource_greylist)
+                                    (trusted_producers)
+                                    (greylist_limit)
+)
+
+FC_REFLECT_ENUM(eosio::chain::db_read_mode, 
+                              (SPECULATIVE)
+                              (HEAD)
+                              (READ_ONLY)
+                              (IRREVERSIBLE)
+)
+
+FC_REFLECT_ENUM(eosio::chain::validation_mode, (FULL)(LIGHT))
+
+FC_REFLECT_ENUM(chainbase::pinnable_mapped_file::map_mode, (mapped)(heap)(locked))

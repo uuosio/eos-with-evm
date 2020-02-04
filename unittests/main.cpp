@@ -15,9 +15,21 @@ void translate_fc_exception(const fc::exception &e) {
    BOOST_TEST_FAIL("Caught Unexpected Exception");
 }
 
+extern "C"
+{
+   void evm_init();
+   void vm_api_ro_init();
+   void vm_api_init();
+   void chain_api_init();
+}
+
 boost::unit_test::test_suite* init_unit_test_suite(int argc, char* argv[]) {
    // Turn off blockchain logging if no --verbose parameter is not added
    // To have verbose enabled, call "tests/chain_test -- --verbose"
+   evm_init();
+   vm_api_init();
+   vm_api_ro_init();
+   chain_api_init();
    bool is_verbose = false;
    std::string verbose_arg = "--verbose";
    for (int i = 0; i < argc; i++) {
