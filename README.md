@@ -1,6 +1,6 @@
-# Setup pre requirements:
+# Setup Pre Requirements:
 
-## Install eosin.cdt 1.7.0
+## Install eosio.cdt 1.7.0
 
 ### Ubuntu:
 
@@ -16,7 +16,7 @@ brew tap eosio/eosio.cdt
 brew install eosio.cdt
 ```
 
-## Install solidity
+## Install Solidity
 
 ### Ubuntu 18.04:
 
@@ -45,19 +45,19 @@ cd evm4eosio
 
 # Run Examples
 
-## Start a local testnet
+## Start a Local Testnet
 
 ```
 ./nodeos/nodeos -p eosio -e --plugin eosio::producer_plugin --plugin eosio::chain_api_plugin --plugin eosio::producer_api_plugin --wasm-runtime eos-vm-jit --contracts-console
 ```
 
-## Clone solidity examples from github
+## Clone Solidity Examples From Github
 ```
 git clone https://github.com/uuosio/solidity-smart-contract-programming
 cd solidity-smart-contract-programming
 ```
 
-## Setup Python environment
+## Setup Python Environment
 
 ```
 python3.7 -m pip install virtualenv
@@ -65,11 +65,12 @@ python3.7 -m virtualenv .venv
 . .venv/bin/activate
 ```
 
-### Install pyeoskit
+### Install PyEosKit
 
 #### Ubuntu
 
 ```
+python3.7 -m pip https://github.com/learnforpractice/pyeoskit/releases/download/v0.7.0/pyeoskit-0.7.0-cp37-cp37m-linux_x86_64.whl
 ```
 
 #### Mac OS X
@@ -77,24 +78,24 @@ python3.7 -m virtualenv .venv
 python3.7 -m pip https://github.com/learnforpractice/pyeoskit/releases/download/v0.7.0/pyeoskit-0.7.0-cp37-cp37m-macosx_10_9_x86_64.whl
 ```
 
-### Install Jupyter notebook
+### Install Jupyter Notebook
 ```
 python3.7 -m pip install notebook
 ```
 
-### Install solc compiler
+### Install Solc Compiler
 ```
 python3.7 -m pip install py-solc-x
 ```
 
-### Install web3
+### Install Web3
 
 ```
 python3.7 -m pip install --pre web3[tester]
 ```
 
 
-### Open jupyter notebook
+### Open Jupyter Notebook
 
 ```
 python3.7 -m notebook
