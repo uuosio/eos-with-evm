@@ -39,7 +39,7 @@ void bios::setalimits( name account, int64_t ram_bytes, int64_t net_weight, int6
 
 void bios::setprods( const std::vector<eosio::producer_authority>& schedule ) {
    require_auth( get_self() );
-   set_proposed_producers( (char *)schedule.data(),  schedule.size());
+//   set_proposed_producers( (char *)schedule.data(),  schedule.size());
 }
 
 void bios::setparams( const eosio::blockchain_parameters& params ) {
