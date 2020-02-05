@@ -158,6 +158,7 @@ endif()
 message( STATUS "Using '${EOSIO_ROOT_KEY}' as public key for 'eosio' account" )
 
 set(EOSIO_COMPILE_TEST_CONTRACTS TRUE)
+set(EOSIO_COMPILE_EOSIO_CONTRACTS TRUE)
 
 add_subdirectory( externals )
 add_subdirectory( contracts )
