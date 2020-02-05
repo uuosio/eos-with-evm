@@ -1,3 +1,4 @@
+
 #pragma once
 
 #include <eosio/eosio.hpp>
@@ -8,12 +9,6 @@ namespace eosio {
          __attribute__((eosio_wasm_import))
          uint64_t get_sender();
       }
-   }
-}
-
-namespace eosio {
-   name get_sender() {
-      return name( internal_use_do_not_use::get_sender() );
    }
 }
 

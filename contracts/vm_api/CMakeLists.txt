@@ -1,5 +1,5 @@
 add_library(vm_api SHARED 
-eosiolib.cpp
+#eosiolib.cpp
 action.cpp
 chain.cpp
 crypto.cpp

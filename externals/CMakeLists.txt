@@ -34,6 +34,6 @@ ExternalProject_Add(
 )
 
 #add_subdirectory(test-contracts)
-add_subdirectory(boost)
+#add_subdirectory(boost)
 add_dependencies(aleth eth_account)
 add_dependencies(aleth vm_api)

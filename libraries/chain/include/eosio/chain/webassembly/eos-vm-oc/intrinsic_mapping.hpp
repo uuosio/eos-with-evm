@@ -260,7 +260,7 @@ constexpr auto intrinsic_table = boost::hana::make_tuple(
    "env.db_find_i256"_s,
    "env.db_lowerbound_i256"_s,
    "env.db_upperbound_i256"_s,
-   "env.db_end_i256"_s,
+   "env.db_end_i256"_s
 );
 
 }}}
