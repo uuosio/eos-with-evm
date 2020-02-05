@@ -36,7 +36,12 @@ brew install solidity
 ```
 
 # Build
+
+```
+git clone --branch evm4eosio https://github.com/learnforpractice/uuos2 evm4eosio --recursive
+cd evm4eosio
 ./script/eosio_build.sh
+```
 
 # Run Examples
 
