@@ -28,7 +28,7 @@ const unsigned char trx_get_value[] = {0xf8,0x64,0x80,0x17,0x83,0x1e,0x84,0x80,0
 
 
 BOOST_AUTO_TEST_CASE( test1 ) try {
-   tester c( setup_policy::preactivate_feature_and_new_bios, db_read_mode::SPECULATIVE, true );
+   tester c( setup_policy::preactivate_feature_and_new_bios );
 
    c.create_accounts( {N(alice), N(bob), N(charlie)} );
    c.produce_block();
@@ -51,7 +51,7 @@ BOOST_AUTO_TEST_CASE( test1 ) try {
    action act;
    act.account = N(bob);
    act.name = N(testcreate);
-   c.push_action( std::move(act), N(bob));
+   auto ret = c.push_action( std::move(act), N(bob).to_uint64_t());
    c.produce_block();
 }
 
@@ -59,7 +59,7 @@ BOOST_AUTO_TEST_CASE( test1 ) try {
 
 
 BOOST_AUTO_TEST_CASE( test2 ) try {
-   tester c( setup_policy::preactivate_feature_and_new_bios, db_read_mode::SPECULATIVE, true );
+   tester c( setup_policy::preactivate_feature_and_new_bios );
 
    const auto& pfm = c.control->get_protocol_feature_manager();
    const auto& d = pfm.get_builtin_digest( builtin_protocol_feature_t::ethereum_vm );
@@ -80,7 +80,7 @@ BOOST_AUTO_TEST_CASE( test2 ) try {
    act.name = N(testsetcode);
    act.data.resize(sizeof(evm_code));
    memcpy(act.data.data(), evm_code, sizeof(evm_code));
-   c.push_action( std::move(act), N(bob));
+   auto ret = c.push_action( std::move(act), N(bob).to_uint64_t());
    c.produce_block();
 }
 #endif
@@ -91,7 +91,7 @@ BOOST_AUTO_TEST_CASE( test2 ) try {
    act.name = N(testcall);
    act.data.resize(sizeof(trx_set_value));
    memcpy(act.data.data(), trx_set_value, sizeof(trx_set_value));
-   c.push_action( std::move(act), N(bob));
+   auto ret = c.push_action( std::move(act), N(bob).to_uint64_t());
    c.produce_block();
 }
 
@@ -101,7 +101,7 @@ BOOST_AUTO_TEST_CASE( test2 ) try {
    act.name = N(testcall);
    act.data.resize(sizeof(trx_get_value));
    memcpy(act.data.data(), trx_get_value, sizeof(trx_get_value));
-   c.push_action( std::move(act), N(bob));
+   auto ret = c.push_action( std::move(act), N(bob).to_uint64_t());
    c.produce_block();
 }
 
@@ -109,7 +109,7 @@ BOOST_AUTO_TEST_CASE( test2 ) try {
    action act;
    act.account = N(bob);
    act.name = N(testexists);
-   c.push_action( std::move(act), N(bob));
+   auto ret = c.push_action( std::move(act), N(bob).to_uint64_t());
    c.produce_block();
 }
 

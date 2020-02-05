@@ -6,7 +6,6 @@
 #include <fc/io/json.hpp>
 #include <eosio/contract_api_plugin/contract_api_plugin.hpp>
 
-#include <vm_manager.hpp>
 
 namespace eosio {
 
@@ -41,7 +40,7 @@ void contract_api_plugin::plugin_startup() {
    });
 }
 
-static string call_contract_off_chain(uint64_t contract, uint64_t action, const vector<char>& binargs) {
+string contract_api_plugin::call_contract_off_chain(uint64_t contract, uint64_t action, const vector<char>& binargs) const {
    auto trace = chain_plug->chain().call_contract(contract, action, binargs);
    if (trace->action_traces.size() > 0) {
       auto& t = trace->action_traces[0];
@@ -59,7 +58,7 @@ call_contract_results contract_api_plugin::call_contract( const call_contract_pa
    fc::variant v;
    try {
 //      s = db_api::get().exec_action(params.code.value, params.action.value, params.binargs);
-      s = call_contract_off_chain(params.code.value, params.action.value, params.binargs);
+      s = call_contract_off_chain(params.code.to_uint64_t(), params.action.to_uint64_t(), params.binargs);
       v = fc::mutable_variant_object("output", s);
       return {v};
    } catch( const boost::interprocess::bad_alloc& ) {
@@ -78,26 +77,4 @@ call_contract_results contract_api_plugin::call_contract( const call_contract_pa
 #undef INVOKE_R_R
 #undef CALL_R_R
 
-}
-
-void uuos_call_contract_off_chain_(string& _params, string& result) {
-   string s;
-   fc::variant v;
-   try {
-      auto params = fc::json::from_string(_params).as<eosio::call_contract_params>();
-      s = vm_manager::get().call_contract_off_chain(params.code.value, params.action.value, params.binargs);
-      v = fc::mutable_variant_object("output", s);
-      result = fc::json::to_string(v, fc::time_point::maximum());
-      return;
-   } catch( const boost::interprocess::bad_alloc& ) {
-      throw;
-   } catch( fc::exception& e ) {
-      v = fc::mutable_variant_object("name", e.name())("code", e.code())("what", e.to_string());
-   } catch( const std::exception& e ) {
-      v = fc::mutable_variant_object("name", BOOST_CORE_TYPEID(e).name())("code", (int64_t)fc::std_exception_code)("what", e.what());
-   } catch( ... ) {
-      fc::unhandled_exception e(FC_LOG_MESSAGE( warn, "unknow error"), std::current_exception() );
-      v = fc::mutable_variant_object("name", BOOST_CORE_TYPEID(e).name())("code", (int64_t)fc::std_exception_code)("what", e.what());
-   }
-   result = fc::json::to_string(fc::mutable_variant_object("error", v), fc::time_point::maximum());
 }

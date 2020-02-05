@@ -9,8 +9,6 @@
 #include <eosio/http_plugin/http_plugin.hpp>
 #include <eosio/chain_plugin/chain_plugin.hpp>
 
-#include <chain_api.hpp>
-
 #include <appbase/application.hpp>
 
 namespace eosio {
@@ -44,6 +42,7 @@ public:
    void plugin_shutdown() {}
 
    call_contract_results call_contract(const call_contract_params& params) const;
+   string call_contract_off_chain(uint64_t contract, uint64_t action, const vector<char>& binargs) const;
 
 private:
    chain_plugin* chain_plug = nullptr;

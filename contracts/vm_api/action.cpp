@@ -59,6 +59,10 @@ void preactivate_feature(const char *digest, size_t size) {
    get_vm_api()->preactivate_feature(digest, size);
 }
 
+void set_action_return_value( const char* packed_blob, size_t datalen ) {
+   get_vm_api()->set_action_return_value(packed_blob, datalen);
+}
+
 #include <stdio.h>
 
 extern "C" {
