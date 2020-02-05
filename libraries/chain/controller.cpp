@@ -34,8 +34,6 @@
 
 #include <new>
 
-void chain_api_set_controller(eosio::chain::controller *_ctrl);
-
 namespace eosio { namespace chain {
 
 void apply_eosio_addaccounts(apply_context&);
@@ -128,6 +126,7 @@ struct building_block {
    vector<transaction_metadata_ptr>      _pending_trx_metas;
    vector<transaction_receipt>           _pending_trx_receipts;
    vector<action_receipt>                _actions;
+   optional<checksum256_type>            _transaction_mroot;
 };
 
 struct assembled_block {
@@ -809,9 +808,7 @@ struct controller_impl {
 
       controller_index_set::add_indices(ro_db);
       contract_database_index_set::add_indices(ro_db);
-      if (conf.uuos_mainnet) {
-         ro_db.add_index<key256_value_index>();
-      }
+      ro_db.add_index<key256_value_index>();
       authorization.add_indices(ro_db);
       resource_limits.add_indices(ro_db);
 
@@ -2505,13 +2502,11 @@ const protocol_feature_manager& controller::get_protocol_feature_manager()const
 controller::controller( const controller::config& cfg, const chain_id_type& chain_id )
 :my( new controller_impl( cfg, *this, protocol_feature_set{}, chain_id ) )
 {
-   chain_api_set_controller(this);
 }
 
 controller::controller( const config& cfg, protocol_feature_set&& pfs, const chain_id_type& chain_id )
 :my( new controller_impl( cfg, *this, std::move(pfs), chain_id ) )
 {
-   chain_api_set_controller(this);
 }
 
 controller::~controller() {

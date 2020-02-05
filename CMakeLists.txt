@@ -1,6 +1,6 @@
 cmake_minimum_required( VERSION 3.8 )
 
-project( UUOSIO )
+project( EOSIO )
 include(CTest) # suppresses DartConfiguration.tcl error
 enable_testing()
 
@@ -103,23 +103,7 @@ endif()
 set( Boost_USE_STATIC_LIBS ON CACHE STRING "ON or OFF" )
 # Most boost deps get implictly picked up via fc, as just about everything links to fc. In addition we pick up
 # the pthread dependency through fc.
-#find_package(Boost 1.67 REQUIRED COMPONENTS program_options unit_test_framework)
-
-find_package(PythonLibs 3.7 REQUIRED)
-message(STATUS "PYTHON_LIBRARIES = ${PYTHON_LIBRARIES}")
-message(STATUS "PYTHON_EXECUTABLE = ${PYTHON_EXECUTABLE}")
-message(STATUS "PYTHON_INCLUDE_DIRS = ${PYTHON_INCLUDE_DIRS}")
-
-
-find_package(Boost 1.67 REQUIRED COMPONENTS
-    date_time
-    filesystem
-    system
-    program_options
-    chrono
-    unit_test_framework
-    iostreams)
-
+find_package(Boost 1.67 REQUIRED COMPONENTS program_options unit_test_framework)
 
 if( APPLE AND UNIX )
 # Apple Specific Options Here
@@ -239,9 +223,6 @@ target_compile_options(secp256k1 PRIVATE -fPIC)
 target_compile_options(vm_manager PRIVATE -fPIC)
 target_compile_options(version PRIVATE -fPIC)
 endif()
-
-add_dependencies(test_contracts_project contracts_project)
-add_dependencies(chainbase boost_1_67_0)
 
 install_directory_permissions(DIRECTORY ${CMAKE_INSTALL_FULL_SYSCONFDIR}/eosio)
 

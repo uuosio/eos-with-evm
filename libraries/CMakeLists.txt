@@ -6,8 +6,7 @@ add_subdirectory( wasm-jit )
 add_subdirectory( appbase )
 add_subdirectory( chain )
 add_subdirectory( testing )
-add_subdirectory( vm )
-add_subdirectory( chain_api )
+#add_subdirectory( chain_api )
 add_subdirectory( version )
 
 #turn tools&tests off; not needed for library build

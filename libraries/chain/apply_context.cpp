@@ -12,9 +12,6 @@
 #include <eosio/chain/global_property_object.hpp>
 #include <boost/container/flat_set.hpp>
 
-#include <vm_manager.hpp>
-#include <chain_api.hpp>
-
 using boost::container::flat_set;
 
 namespace eosio { namespace chain {

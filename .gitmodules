@@ -33,3 +33,6 @@
 [submodule "externals/aleth"]
 	path = externals/aleth
 	url = https://github.com/learnforpractice/aleth
+[submodule "externals/eosio.contracts"]
+	path = externals/eosio.contracts
+	url = https://github.com/eosio/eosio.contracts
