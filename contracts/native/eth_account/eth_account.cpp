@@ -52,6 +52,7 @@ extern "C" {
 
 struct [[eosio::table]] ethaccount {
     uint64_t                        index;
+    uint64_t                        creator;
     int64_t                         ram_quota;
     int32_t                         nonce;
     uint64_t                        version;
@@ -71,6 +72,14 @@ struct [[eosio::table]] ethaccount {
     EOSLIB_SERIALIZE( ethaccount, (index)(nonce)(ram_quota)(address)(balance)(code) )
 };
 
+struct [[eosio::table]] addressmap {
+    uint64_t                        creator;
+    std::array<unsigned char, 20>   address;
+    uint64_t primary_key() const { return creator; }
+
+    EOSLIB_SERIALIZE( addressmap, (creator)(address) )
+};
+
 struct [[eosio::table]] accountcounter {
     uint64_t                        count;
     EOSLIB_SERIALIZE( accountcounter, (count) )
@@ -78,17 +87,46 @@ struct [[eosio::table]] accountcounter {
 
 typedef eosio::singleton< "global"_n, accountcounter >   account_counter;
 
+typedef multi_index<"addressmap"_n, addressmap> addressmap_table;
 
 typedef multi_index<"ethaccount"_n,
                 ethaccount,
                 indexed_by< "bysecondary"_n,
                 const_mem_fun<ethaccount, checksum256, &ethaccount::get_secondary> > > ethaccount_table;
 
+
+bool eth_account_bind_address_to_creator(eth_address& address, uint64_t creator) {
+    uint64_t code = current_receiver().value;
+    uint64_t scope = code;
+    name payer = current_receiver();
+
+    addressmap_table table(name(code), scope);
+    check (table.end() == table.find(creator), "eth address already bind to an EOS account");
+
+    table.emplace( payer, [&]( auto& row ) {
+        row.creator = creator;
+        memcpy(row.address.data(), address.data(), 20);
+    });
+    eth_account_create(address);
+    return true;
+}
+
+bool eth_account_find_address_by_creator(uint64_t creator, eth_address& address) {
+    uint64_t code = current_receiver().value;
+    uint64_t scope = code;
+
+    addressmap_table table(name(code), scope);
+    auto itr = table.find(creator);
+    if (table.end() == itr) {
+        return false;
+    }
+    address = itr->address;
+    return true;
+}
+
 bool eth_account_create(eth_address& address, int64_t ram_quota) {
     uint64_t code = current_receiver().value;
     uint64_t scope = code;
-    uint64_t receiver = current_receiver().value;
-    uint64_t table = "ethaccount"_n.value;
 
     uint64_t payer = current_receiver().value;
 
@@ -115,7 +153,7 @@ bool eth_account_create(eth_address& address, int64_t ram_quota) {
         counter.set(a, name(payer));
 
         mytable.emplace( name(payer), [&]( auto& row ) {
-            asset a(0, symbol("SYS", 4));
+            asset a(0, symbol(ETH_ASSET_SYMBOL, 4));
 
             row.balance = a;
             memcpy(row.address.data(), address.data(), 20);
@@ -138,10 +176,6 @@ bool eth_account_create(eth_address& address, int64_t ram_quota) {
 bool eth_account_exists(eth_address& address) {
     uint64_t code = current_receiver().value;
     uint64_t scope = code;
-    uint64_t receiver = current_receiver().value;
-    uint64_t table = "ethaccount"_n.value;
-
-    uint64_t payer = current_receiver().value;
 
     checksum256 _address;
     memset(_address.data(), 0, sizeof(checksum256));
@@ -157,13 +191,14 @@ bool eth_account_exists(eth_address& address) {
     return true;
 }
 
+void eth_account_check_address(eth_address& address) {
+    bool ret = eth_account_exists(address);
+    check(ret, "eth address does not exists!");
+}
+
 uint64_t eth_account_get_info(eth_address& address, int32_t* nonce, int64_t* ram_quota, int64_t* amount) {
     uint64_t code = current_receiver().value;
     uint64_t scope = code;
-    uint64_t receiver = current_receiver().value;
-    uint64_t table = "ethaccount"_n.value;
-
-    uint64_t payer = current_receiver().value;
 
     checksum256 _address;
     memset(_address.data(), 0, sizeof(checksum256));
@@ -191,8 +226,6 @@ uint64_t eth_account_get_info(eth_address& address, int32_t* nonce, int64_t* ram
 bool eth_account_set_info(eth_address& address, int32_t nonce, int64_t ram_quota, int64_t amount) {
     uint64_t code = current_receiver().value;
     uint64_t scope = code;
-    uint64_t receiver = current_receiver().value;
-    uint64_t table = "ethaccount"_n.value;
 
     uint64_t payer = current_receiver().value;
 
@@ -222,7 +255,7 @@ bool eth_account_set_info(eth_address& address, int32_t nonce, int64_t ram_quota
         mytable.emplace( name(payer), [&]( auto& row ) {
             row.nonce = nonce;
             row.ram_quota = ram_quota;
-            asset a(amount, symbol("SYS", 4));
+            asset a(amount, symbol(ETH_ASSET_SYMBOL, 4));
             row.balance = a;
             row.index = index;
             memcpy(row.address.data(), address.data(), 20);
@@ -241,10 +274,7 @@ bool eth_account_set_info(eth_address& address, int32_t nonce, int64_t ram_quota
 bool eth_account_get(eth_address& address, ethaccount& account) {
     uint64_t code = current_receiver().value;
     uint64_t scope = code;
-    uint64_t receiver = current_receiver().value;
     uint64_t table = "ethaccount"_n.value;
-
-    uint64_t payer = current_receiver().value;
 
     checksum256 _address;
     memset(_address.data(), 0, sizeof(checksum256));
@@ -264,8 +294,6 @@ bool eth_account_get(eth_address& address, ethaccount& account) {
 bool eth_account_set(eth_address& address, const ethaccount& account) {
     uint64_t code = current_receiver().value;
     uint64_t scope = code;
-    uint64_t receiver = current_receiver().value;
-    uint64_t table = "ethaccount"_n.value;
 
     uint64_t payer = current_receiver().value;
 
@@ -309,8 +337,6 @@ bool eth_account_set(eth_address& address, const ethaccount& account) {
 int64_t eth_account_get_balance(eth_address& address) {
     uint64_t code = current_receiver().value;
     uint64_t scope = code;
-    uint64_t receiver = current_receiver().value;
-    uint64_t table = "ethaccount"_n.value;
 
     uint64_t payer = current_receiver().value;
 
@@ -331,8 +357,6 @@ int64_t eth_account_get_balance(eth_address& address) {
 bool eth_account_set_balance(eth_address& address, int64_t amount) {
     uint64_t code = current_receiver().value;
     uint64_t scope = code;
-    uint64_t receiver = current_receiver().value;
-    uint64_t table = "ethaccount"_n.value;
 
     uint64_t payer = current_receiver().value;
 
@@ -440,7 +464,6 @@ bool eth_account_clear_value(eth_address& address, key256& key) {
     }
     uint64_t code = current_receiver().value;
     uint64_t scope = code;
-    uint64_t payer = code;
 
     int itr = db_find_i256(code, scope, index, key.data(), 32);
     if (itr < 0) {

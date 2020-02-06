@@ -8,6 +8,7 @@ struct ALIGNED(eth_address) {
     unsigned char data[20];
 };
 */
+#define ETH_ASSET_SYMBOL "SYS"
 
 typedef std::array<unsigned char, 20> eth_address;
 
@@ -16,8 +17,12 @@ typedef std::array<unsigned char, 32> value256;
 // typedef std::vector<unsigned char> key256;
 // typedef std::vector<unsigned char> value256;
 
+bool eth_account_bind_address_to_creator(eth_address& address, uint64_t creator);
+bool eth_account_find_address_by_creator(uint64_t creator, eth_address& address);
+
 bool eth_account_create(eth_address& address, int64_t ram_quota = 0);
 bool eth_account_exists(eth_address& address);
+void eth_account_check_address(eth_address& address);
 
 uint64_t eth_account_get_info(eth_address& address, int32_t* nonce, int64_t* ram_quota, int64_t* amount);
 bool eth_account_set_info(eth_address& address, int32_t nonce, int64_t ram_quota, int64_t amount);
