@@ -115,12 +115,12 @@ bool eth_account_create(eth_address& address, int64_t ram_quota) {
         counter.set(a, name(payer));
 
         mytable.emplace( name(payer), [&]( auto& row ) {
-            asset a(0, symbol("EOS", 4));
+            asset a(0, symbol("SYS", 4));
 
             row.balance = a;
             memcpy(row.address.data(), address.data(), 20);
             row.index = index;
-            row.nonce = 0;
+            row.nonce = 1;
             row.ram_quota = 0;
         });
         return true;
@@ -222,7 +222,7 @@ bool eth_account_set_info(eth_address& address, int32_t nonce, int64_t ram_quota
         mytable.emplace( name(payer), [&]( auto& row ) {
             row.nonce = nonce;
             row.ram_quota = ram_quota;
-            asset a(amount, symbol("EOS", 4));
+            asset a(amount, symbol("SYS", 4));
             row.balance = a;
             row.index = index;
             memcpy(row.address.data(), address.data(), 20);
