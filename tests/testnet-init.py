@@ -16,7 +16,7 @@ from pyeoskit import util
 from pyeoskit.exceptions import HttpAPIError
 import sys
 
-logging.basicConfig(level=logging.INFO, format='%(asctime)s %(levelname)s %(module)s %(lineno)d %(message)s')
+logging.basicConfig(level=logging.INFO, format='%(asctime)s %(levelname)s %(lineno)d %(module)s %(message)s')
 # formatter = logging.Formatter('%(asctime)s %(levelname)s %(module)s %(lineno)d %(message)s')
 # handler = logging.StreamHandler()
 # handler.setFormatter(formatter)
@@ -123,11 +123,11 @@ try:
 except Exception as e:
     logger.exception(e)
 
-try:
-    eosapi.update_runtime_options(max_transaction_time=230)
-    time.sleep(2.0)
-except Exception as e:
-    logger.exception(e)
+# try:
+#     eosapi.update_runtime_options(max_transaction_time=230)
+#     time.sleep(2.0)
+# except Exception as e:
+#     logger.exception(e)
 
 create_system_accounts()
 
@@ -141,7 +141,7 @@ feature_digests = ['ad9e3d8f650687709fd68f4b90b41f7d825a365b02c23a636cef88ac2ac0
             '4a90c00d55454dc5b059055ca213579c6ea856967712a56017487886a4d4cc0f', #NO_DUPLICATE_DEFERRED_ID
             '8ba52fe7a3956c5cd3a656a3174b931d3bb2abb45578befc59f283ecd816a405', #ONLY_BILL_FIRST_AUTHORIZER
             '299dcb6af692324b899b39f16d5a530a33062804e41f09dc97e9f156b4476707', #WTMSIG_BLOCK_SIGNATURES
-            '8e66379ab121fabc3d5309dc48d2654c7148958281eb86ae2273bda8f542d76a', #ACTION_RETURN_VALUE
+            'c3a6138c5061cf291310887c0b5c71fcaffeab90d5deb50d3b9e687cead45071', #ACTION_RETURN_VALUE
             '8431d19ea6d9ce0755c32f89237776f8006204447e8299f102d3273cd6b7ce62', #ETHEREUM_VM
 ]
 
@@ -195,5 +195,5 @@ while True:
             logger.info(f'exception:{e}')
 
     logger.info(f'AVG: {elapsed/10}')
-    print(eosapi.get_balance('hello'))
+    logger.info(eosapi.get_balance('hello'))
     time.sleep(2.0)
