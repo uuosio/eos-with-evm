@@ -92,7 +92,9 @@ def create_system_accounts():
         'eosio.jitfee',
         'hello',
         'helloworld12',
-        'helloworld11'
+        'helloworld11',
+        'helloworld13',
+        'helloworld33',
     ]
     newaccount = {'creator': 'eosio',
      'name': '',
@@ -176,6 +178,9 @@ except Exception as e:
 
 if eosapi.get_balance('helloworld11') <=0:
     r = eosapi.push_action('eosio.token', 'transfer', {"from":"eosio", "to":"helloworld11","quantity":f"10000000.0000 {config.main_token}","memo":""}, {'eosio':'active'})
+
+if eosapi.get_balance('helloworld12') <=0:
+    r = eosapi.push_action('eosio.token', 'transfer', {"from":"eosio", "to":"helloworld12","quantity":f"10000000.0000 {config.main_token}","memo":""}, {'eosio':'active'})
 
 if eosapi.get_balance('hello') <=0:
     r = eosapi.push_action('eosio.token', 'transfer', {"from":"eosio", "to":"hello","quantity":f"10000000.0000 {config.main_token}","memo":""}, {'eosio':'active'})
