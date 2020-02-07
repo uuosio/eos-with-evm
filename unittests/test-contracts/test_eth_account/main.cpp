@@ -8,7 +8,7 @@
 using namespace eosio;
 
 __attribute__((eosio_wasm_import))
-extern "C" int evm_execute(const unsigned char* code, size_t size);
+int evm_execute(const char *raw_trx, size_t raw_trx_size, const char *sender_address, size_t sender_address_size);
 
 extern "C" void apply(uint64_t receiver, uint64_t code, uint64_t action) {
    //2c7536E3605D9C16a7a3D7b1898e529396a65c23
@@ -103,7 +103,7 @@ extern "C" void apply(uint64_t receiver, uint64_t code, uint64_t action) {
       int32_t code_size = eosio::action_data_size();
       code.resize(code_size);
       eosio::read_action_data(code.data(), code_size);
-      evm_execute(code.data(), code_size);
+      evm_execute(code.data(), code_size, sender_address, 20);
 
       memcpy(addr.data(), _addr, 20);
       check(eth_account_exists(addr), "account should exists");
@@ -112,6 +112,7 @@ extern "C" void apply(uint64_t receiver, uint64_t code, uint64_t action) {
       int32_t code_size = eosio::action_data_size();
       code.resize(code_size);
       eosio::read_action_data(code.data(), code_size);
-      evm_execute(code.data(), code_size);
+      eth_address addr;
+      evm_execute(code.data(), code_size, addr.data(), 20);
    }
 }
