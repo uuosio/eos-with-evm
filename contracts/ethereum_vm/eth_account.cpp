@@ -415,7 +415,7 @@ bool eth_account_set_balance(eth_address& address, int64_t amount) {
     return true;
 }
 
-bool eth_account_get_code(eth_address& address, std::vector<unsigned char>& code) {
+bool eth_account_get_code_bk(eth_address& address, std::vector<unsigned char>& code) {
     ethaccount account;
     if (!eth_account_get(address, account)) {
         return false;
@@ -424,13 +424,55 @@ bool eth_account_get_code(eth_address& address, std::vector<unsigned char>& code
     return true;
 }
 
-bool eth_account_set_code(eth_address& address, const std::vector<unsigned char>& code) {
+bool eth_account_set_code_bk(eth_address& address, const std::vector<unsigned char>& code) {
     ethaccount account;
     if (!eth_account_get(address, account)) {
         return 0;
     }
     account.code = code;
     return eth_account_set(address, account);
+}
+
+#define CODE_TABLE_NAME 0xFFFFFFFFFFFFFFFF
+bool eth_account_get_code(eth_address& address, std::vector<unsigned char>& evm_code) {
+    uint64_t code = current_receiver().value;
+    uint64_t scope = code;
+    key256 key;
+    memset(key.data(), 0, 32);
+    memcpy(key.data(), address.data(), 20);
+
+    int itr = db_find_i256(code, scope, CODE_TABLE_NAME, key.data(), 32);
+    if (itr < 0) {
+        return false;
+    }
+
+    int size = db_get_i256(itr, nullptr, 0);
+    if (size <= 0) {
+        return false;
+    }
+
+    evm_code.resize(size);
+    db_get_i256(itr, (char *)evm_code.data(), size);
+
+    return true;
+}
+
+bool eth_account_set_code(eth_address& address, const std::vector<unsigned char>& evm_code) {
+    uint64_t code = current_receiver().value;
+    uint64_t scope = code;
+    uint64_t payer = code;
+
+    key256 key;
+    memset(key.data(), 0, 32);
+    memcpy(key.data(), address.data(), 20);
+
+    int itr = db_find_i256(code, scope, CODE_TABLE_NAME, key.data(), 32);
+    if (itr < 0) {
+        db_store_i256(scope, CODE_TABLE_NAME, payer, (char*)key.data(), 32, (char *)evm_code.data(), evm_code.size());
+    } else {
+        db_update_i256(itr, payer, (char *)evm_code.data(), evm_code.size());
+    }
+    return true;
 }
 
 bool eth_account_get_nonce(eth_address& address, uint32_t& nonce) {
@@ -450,7 +492,6 @@ bool eth_account_set_nonce(eth_address& address, uint32_t nonce) {
     account.nonce = nonce;
     return eth_account_set(address, account);
 }
-
 
 
 uint64_t eth_account_get_index(eth_address& address) {

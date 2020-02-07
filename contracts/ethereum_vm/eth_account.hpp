@@ -9,6 +9,7 @@ struct ALIGNED(eth_address) {
 };
 */
 #define ETH_ASSET_SYMBOL "SYS"
+static constexpr int64_t max_amount = (1LL << 62) - 1;
 
 typedef std::array<unsigned char, 20> eth_address;
 

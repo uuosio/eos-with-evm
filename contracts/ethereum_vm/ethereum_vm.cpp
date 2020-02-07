@@ -153,6 +153,7 @@ extern "C" {
                     check(ret, "eth address not bind to an EOS account!!");
                     asset a(0, symbol(MAIN_TOKEN_NAME, 4));
                     a.amount = eth_account_get_balance(address);
+                    eosio::print("+++++eth amount:", a.amount);
                     a += t.quantity;
                     eth_account_set_balance(address, a.amount);
                 }
