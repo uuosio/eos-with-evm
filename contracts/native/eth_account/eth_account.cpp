@@ -69,7 +69,7 @@ struct [[eosio::table]] ethaccount {
        memcpy(ret.data(), address.data(), 20);
        return ret;
     }
-    EOSLIB_SERIALIZE( ethaccount, (index)(nonce)(ram_quota)(address)(balance)(code) )
+    EOSLIB_SERIALIZE( ethaccount, (index)(creator)(ram_quota)(nonce)(address)(balance)(code) )
 };
 
 struct [[eosio::table]] addressmap {
@@ -98,7 +98,7 @@ typedef multi_index<"ethaccount"_n,
 bool eth_account_bind_address_to_creator(eth_address& address, uint64_t creator) {
     uint64_t code = current_receiver().value;
     uint64_t scope = code;
-    name payer = current_receiver();
+    name payer(creator);
 
     addressmap_table table(name(code), scope);
     check (table.end() == table.find(creator), "eth address already bind to an EOS account");
@@ -107,7 +107,7 @@ bool eth_account_bind_address_to_creator(eth_address& address, uint64_t creator)
         row.creator = creator;
         memcpy(row.address.data(), address.data(), 20);
     });
-    eth_account_create(address);
+    eth_account_create(address, 0, creator);
     return true;
 }
 
@@ -124,12 +124,16 @@ bool eth_account_find_address_by_creator(uint64_t creator, eth_address& address)
     return true;
 }
 
-bool eth_account_create(eth_address& address, int64_t ram_quota) {
+bool eth_account_create(eth_address& address, int64_t ram_quota, uint64_t creator) {
     uint64_t code = current_receiver().value;
     uint64_t scope = code;
-
-    uint64_t payer = current_receiver().value;
-
+    uint64_t payer;
+    if (creator) {
+        payer = creator;
+    } else {
+        payer = current_receiver().value;
+    }
+    
     checksum256 _address;
     memset(_address.data(), 0, sizeof(checksum256));
     memcpy(_address.data(), address.data(), 20);
@@ -158,6 +162,7 @@ bool eth_account_create(eth_address& address, int64_t ram_quota) {
             row.balance = a;
             memcpy(row.address.data(), address.data(), 20);
             row.index = index;
+            row.creator = creator;
             row.nonce = 1;
             row.ram_quota = 0;
         });
@@ -192,8 +197,39 @@ bool eth_account_exists(eth_address& address) {
 }
 
 void eth_account_check_address(eth_address& address) {
-    bool ret = eth_account_exists(address);
-    check(ret, "eth address does not exists!");
+    uint64_t code = current_receiver().value;
+    uint64_t scope = code;
+
+    checksum256 _address;
+    memset(_address.data(), 0, sizeof(checksum256));
+    memcpy(_address.data(), address.data(), 20);
+
+    ethaccount_table mytable(name(code), scope);
+    auto idx_sec = mytable.get_index<"bysecondary"_n>();
+    
+    auto idx = idx_sec.find(_address);
+    check(idx != idx_sec.end(), "eth address does not exists!");
+
+    addressmap_table table(name(code), scope);
+    check(table.end() != table.find(idx->creator), "eth address does not bind to an EOS account!");
+}
+
+void eth_account_check_address2(eth_address& address) {
+    uint64_t code = current_receiver().value;
+    uint64_t scope = code;
+
+    checksum256 _address;
+    memset(_address.data(), 0, sizeof(checksum256));
+    memcpy(_address.data(), address.data(), 20);
+
+    ethaccount_table mytable(name(code), scope);
+    auto idx_sec = mytable.get_index<"bysecondary"_n>();
+    
+    auto idx = idx_sec.find(_address);
+    check(idx != idx_sec.end(), "eth address does not exists!");
+    eosio::print("+++++creator:", idx->creator);
+    addressmap_table table(name(code), scope);
+//    check(table.end() != table.find(idx->creator), "eth address does not bind to an EOS account!");
 }
 
 uint64_t eth_account_get_info(eth_address& address, int32_t* nonce, int64_t* ram_quota, int64_t* amount) {

@@ -42,17 +42,11 @@ void vm_throw_exception(int type, const char* fmt, ...);
 int transfer_inline(uint64_t to, int64_t amount, uint64_t symbol);
 int transfer(uint64_t from, uint64_t to, int64_t amount, uint64_t symbol);
 
-//eosio.token.cpp
+//evm4eos
 extern "C" {
    void eosio_assert(uint32_t cnd, const char* msg);
-   void token_create( uint64_t issuer, int64_t maximum_supply, uint64_t symbol);
-   void token_issue( uint64_t to, int64_t quantity, uint64_t symbol, const char* memo, size_t size2 );
-   void token_transfer( uint64_t from, uint64_t to, int64_t quantity, uint64_t symbol, const char* memo, size_t size2);
-   void token_open( uint64_t owner, uint64_t _symbol, uint64_t ram_payer );
-   void token_retire( int64_t amount, uint64_t _symbol, const char *memo, size_t memo_size );
-   void token_close( uint64_t owner, uint64_t _symbol );
 
-   int evm_execute(const char *raw_trx, size_t raw_trx_size);
+   int evm_execute(const char *raw_trx, size_t raw_trx_size, const char *sender_address, size_t sender_address_size);
 }
 
 namespace eosio {

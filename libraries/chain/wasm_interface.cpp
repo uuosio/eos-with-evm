@@ -28,7 +28,8 @@
 #include <vm_api/vm_api.h>
 
 extern "C" {
-   int evm_execute(const unsigned char *raw_trx, int raw_trx_size);
+   int evm_get_account_id(const char* account, size_t account_size, const char* arbitrary_string, size_t arbitrary_string_size, char* hash, size_t hash_size);
+   int evm_execute(const char *raw_trx, size_t raw_trx_size, const char *sender_address, size_t sender_address_size);
 }
 
 #if defined(EOSIO_EOS_VM_RUNTIME_ENABLED) || defined(EOSIO_EOS_VM_JIT_RUNTIME_ENABLED)
@@ -1154,8 +1155,13 @@ class action_api : public context_aware_api {
          context.action_return_value.assign( packed_blob.value, packed_blob.value + datalen );
       }
 
-      int evm_execute(array_ptr<unsigned char> trx, uint32_t size) {
-         return ::evm_execute(trx.value, size);
+      int evm_execute(array_ptr<char> trx, uint32_t size, array_ptr<char> sender_address, uint32_t sender_address_size) {
+         return ::evm_execute(trx.value, size, sender_address, sender_address_size);
+      }
+
+      int evm_get_account_id(uint64_t account, array_ptr<char> arbitrary_string, uint32_t arbitrary_string_size, array_ptr<char> hash, uint32_t hash_size) {
+         string _account = account_name(account).to_string();
+         return ::evm_get_account_id(_account.c_str(), _account.size(), arbitrary_string.value, arbitrary_string_size, hash.value, hash_size);
       }
 };
 
@@ -2081,7 +2087,8 @@ REGISTER_INTRINSICS(action_api,
    (action_data_size,         int()          )
    (current_receiver,         int64_t()      )
    (set_action_return_value,  void(int, int) )
-   (evm_execute,              int(int, int)  )
+   (evm_execute,              int(int, int, int, int)  )
+   (evm_get_account_id,       int(int64_t, int, int, int, int)  )
 );
 
 REGISTER_INTRINSICS(authorization_api,

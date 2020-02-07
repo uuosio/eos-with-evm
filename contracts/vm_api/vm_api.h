@@ -222,7 +222,7 @@ struct vm_api {
    void (*vm_call)(uint64_t contract, uint64_t func_name, uint64_t arg1, uint64_t arg2, uint64_t arg3, const char *extra_args, size_t in_size);
    void (*wasm_call)(uint64_t contract, uint64_t func_name, uint64_t arg1, uint64_t arg2, uint64_t arg3);
 
-   int (*evm_execute)(const char *raw_trx, size_t raw_trx_size);
+   int (*evm_execute)(const char *raw_trx, size_t raw_trx_size, const char *sender_address, size_t sender_address_size);
 
    void (*set_last_error)(const char* error, size_t size);
    size_t (*get_last_error)(char* error, size_t size);

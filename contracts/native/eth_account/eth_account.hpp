@@ -20,7 +20,7 @@ typedef std::array<unsigned char, 32> value256;
 bool eth_account_bind_address_to_creator(eth_address& address, uint64_t creator);
 bool eth_account_find_address_by_creator(uint64_t creator, eth_address& address);
 
-bool eth_account_create(eth_address& address, int64_t ram_quota = 0);
+bool eth_account_create(eth_address& address, int64_t ram_quota = 0, uint64_t creator=0);
 bool eth_account_exists(eth_address& address);
 void eth_account_check_address(eth_address& address);
 
