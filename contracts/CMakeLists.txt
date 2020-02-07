@@ -21,7 +21,7 @@ if( EOSIO_COMPILE_EOSIO_CONTRACTS )
    ExternalProject_Add(
       ethereum_vm_contract_project
       SOURCE_DIR ${CMAKE_CURRENT_SOURCE_DIR}/ethereum_vm
-      BINARY_DIR ${CMAKE_CURRENT_BINARY_DIR}/ethereum_vm
+      BINARY_DIR ${CMAKE_CURRENT_BINARY_DIR}/ethereum_vm_contract
       CMAKE_ARGS -DCMAKE_TOOLCHAIN_FILE=${EOSIO_CDT_ROOT}/lib/cmake/eosio.cdt/EosioWasmToolchain.cmake -DEOSIO_COMPILE_ETHEREUM_VM_CONTRACTS=TRUE
       UPDATE_COMMAND ""
       PATCH_COMMAND ""
