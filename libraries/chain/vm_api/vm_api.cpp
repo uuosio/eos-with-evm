@@ -165,22 +165,6 @@ int is_contracts_console_enabled() {
 //    return vm_manager::get().get_result((char*)result, size1);
 // }
 
-static int to_base58( const char *in, size_t size1, char *out, size_t size2 ) {
-   std::vector<char> v(in, in+size1);
-   std::string s = fc::to_base58( v );
-   auto copy_size = std::min(size2, s.size());
-   ::memcpy(out, s.c_str(), copy_size);
-   return copy_size;
-}
-
-static int from_base58( const char *in, size_t size1, char *out, size_t size2 ) {
-   string s(in, size1);
-   auto v = fc::from_base58(s);
-   auto copy_size = std::min(v.size(), size2);
-   ::memcpy(out, v.data(), copy_size);
-   return copy_size;
-}
-
 static void __ashlti3(__int128* ret, uint64_t low, uint64_t high, uint32_t shift) {
     fc::uint128_t i(high, low);
     i <<= shift;
@@ -389,22 +373,9 @@ extern "C" void vm_api_init() {
       // _vm_api.call_contract_set_results = call_contract_set_results;
       // _vm_api.call_contract_get_results = call_contract_get_results;
 
-      // _vm_api.token_create = token_create;
-      // _vm_api.token_issue = token_issue;
-      // _vm_api.token_transfer = token_transfer;
-      // _vm_api.token_open = token_open;
-      // _vm_api.token_retire = token_retire;
-      // _vm_api.token_close = token_close;
-
       _vm_api.get_last_error = get_last_error;
       _vm_api.set_last_error = set_last_error;
       _vm_api.clear_last_error = clear_last_error;
-
-      _vm_api.set_copy_memory_range = set_copy_memory_range;
-      _vm_api.get_copy_memory_range = get_copy_memory_range;
-
-      _vm_api.to_base58 = to_base58;
-      _vm_api.from_base58 = from_base58;
 
       _vm_api.is_feature_activated = is_feature_activated;
       _vm_api.preactivate_feature = preactivate_feature;

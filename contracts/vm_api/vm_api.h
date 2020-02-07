@@ -209,13 +209,6 @@ struct vm_api {
    void (*assert_context_free)(void);
    int (*get_context_free_data)( uint32_t index, char* buff, size_t size );
 
-   void (*token_create)( uint64_t issuer, int64_t maximum_supply, uint64_t symbol );
-   void (*token_issue)( uint64_t to, int64_t quantity, uint64_t symbol, const char* memo, size_t size2 );
-   void (*token_transfer)( uint64_t from, uint64_t to, int64_t quantity, uint64_t symbol, const char* memo, size_t size2 );
-   void (*token_open)( uint64_t owner, uint64_t _symbol, uint64_t ram_payer );
-   void (*token_retire)( int64_t amount, uint64_t _symbol, const char *memo, size_t memo_size );
-   void (*token_close)( uint64_t owner, uint64_t _symbol );
-
    int (*call_contract_get_extra_args)(void *extra_args, size_t size1);
    int (*call_contract_set_results)(const void *result, size_t size1);
    int (*call_contract_get_results)(void *result, size_t size1);
@@ -229,11 +222,6 @@ struct vm_api {
    void (*clear_last_error)();
 
    void (*log)(int level, int line, const char *file, const char *func, const char *fmt, ...);
-   void (*set_copy_memory_range)(int start, int end);
-   void (*get_copy_memory_range)(int *start, int *end);
-
-   int (*to_base58)(const char *in, size_t size1, char *out, size_t size2);
-   int (*from_base58)(const char *in, size_t size1, char *out, size_t size2);
 
    bool (*is_feature_activated)(const char *digest, size_t size);
    void (*preactivate_feature)(const char *digest, size_t size);

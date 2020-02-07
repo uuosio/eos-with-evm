@@ -83,15 +83,4 @@ size_t get_last_error(char* error, size_t size) {
 void clear_last_error() {
    last_error.clear();
 }
-static int g_grow_memory_start = 0;
-static int g_grow_memory_end = 0;
 
-static void set_copy_memory_range(int start, int end) {
-   g_grow_memory_start = start;
-   g_grow_memory_end = end;
-}
-
-static void get_copy_memory_range(int *start, int *end) {
-   *start = g_grow_memory_start;
-   *end = g_grow_memory_end;
-}
