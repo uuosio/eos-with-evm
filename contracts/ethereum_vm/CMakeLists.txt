@@ -3,7 +3,7 @@ if (EOSIO_COMPILE_ETHEREUM_VM_CONTRACTS)
 set(EOSIO_WASM_OLD_BEHAVIOR "Off")
 find_package( eosio.cdt REQUIRED )
 
-add_contract(ethereum_vm ethereum_vm evm.cpp)
+add_contract(ethereum_vm ethereum_vm ethereum_vm.cpp)
 
 # target_include_directories(ethereum_vm
 #    PUBLIC
@@ -12,6 +12,8 @@ add_contract(ethereum_vm ethereum_vm evm.cpp)
 set_target_properties(ethereum_vm
    PROPERTIES
    RUNTIME_OUTPUT_DIRECTORY "${CMAKE_CURRENT_BINARY_DIR}")
+
+configure_file( ${CMAKE_CURRENT_SOURCE_DIR}/ethereum_vm.abi ${CMAKE_CURRENT_BINARY_DIR}/ethereum_vm.abi @COPYONLY )
 
 else()
 
