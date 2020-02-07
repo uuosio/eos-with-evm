@@ -73,7 +73,6 @@ extern "C" {
                 require_auth(v.account);
                 evm_get_account_id(v.account.value, v.text.c_str(), v.text.size(), (char *)address.data(), 20);
                 eosio::printhex(address.data(), address.size());
-                eosio::print("\n");
                 bool ret = eth_account_bind_address_to_creator(address, v.account.value);
                 eosio::check(ret, "eth address already been activated");
                 set_action_return_value((char *)address.data(), 20);
