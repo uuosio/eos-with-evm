@@ -42,8 +42,3 @@ bool eth_account_clear_value(eth_address& address, key256& key);
 
 bool eth_account_get_nonce(eth_address& address, uint32_t& nonce);
 bool eth_account_set_nonce(eth_address& address, uint32_t nonce);
-
-
-void token_create( uint64_t issuer, int64_t maximum_supply, uint64_t sym);
-void token_issue( uint64_t to, int64_t quantity, uint64_t sym, const char* memo, size_t size2 );
-void token_transfer( uint64_t from, uint64_t to, int64_t quantity, uint64_t sym, const char* memo, size_t size2);
