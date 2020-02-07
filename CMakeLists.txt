@@ -178,7 +178,7 @@ endif()
 
 if (APPLE)
 else()
-    target_compile_options(eth_account PRIVATE -fPIC)
+    target_compile_options(ethereum_vm PRIVATE -fPIC)
 endif()
 
 

@@ -1,1 +1,1 @@
-add_subdirectory(eth_account)
+add_subdirectory(ethereum_vm)

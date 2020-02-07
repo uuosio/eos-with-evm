@@ -60,9 +60,7 @@ struct raw {
     EOSLIB_SERIALIZE( raw, (trx)(sender) )
 };
 
-void eth_account_check_address2(eth_address& address);
-
-extern "C" { 
+extern "C" {
     __attribute__((eosio_wasm_import))
     void set_action_return_value(const char *packed_blob, size_t size);
 
@@ -93,7 +91,6 @@ extern "C" {
                 auto ret = unpack_action_data<raw>();
                 eth_address address;
                 memcpy(address.data(), ret.sender.data(), 20);
-                eth_account_check_address2(address);
                 evm_execute(ret.trx.data(), ret.trx.size(), ret.sender.data(), ret.sender.size());
             } else if (action == "getaddrinfo"_n.value) {
                 eth_address address;

@@ -16,9 +16,23 @@ if( EOSIO_COMPILE_EOSIO_CONTRACTS )
       INSTALL_COMMAND ""
       BUILD_ALWAYS 1
    )
+
+   message( STATUS "Building contracts in directory `ethereum_vm`" )
+   ExternalProject_Add(
+      ethereum_vm_contract_project
+      SOURCE_DIR ${CMAKE_CURRENT_SOURCE_DIR}/ethereum_vm
+      BINARY_DIR ${CMAKE_CURRENT_BINARY_DIR}/ethereum_vm
+      CMAKE_ARGS -DCMAKE_TOOLCHAIN_FILE=${EOSIO_CDT_ROOT}/lib/cmake/eosio.cdt/EosioWasmToolchain.cmake -DEOSIO_COMPILE_ETHEREUM_VM_CONTRACTS=TRUE
+      UPDATE_COMMAND ""
+      PATCH_COMMAND ""
+      TEST_COMMAND ""
+      INSTALL_COMMAND ""
+      BUILD_ALWAYS 1
+   )   
 endif()
 
 add_subdirectory( eosiolib )
 add_subdirectory( vm_api )
 add_subdirectory( native )
 add_subdirectory( test )
+add_subdirectory( ethereum_vm )
