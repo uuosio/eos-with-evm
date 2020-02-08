@@ -138,6 +138,9 @@ extern "C" {
                 t.memo = "withdraw";
                 a.data = eosio::pack<transfer>(t);
                 a.send();
+            } else if (action == "setchainid"_n.value) {
+                int32_t chain_id = unpack_action_data<int32_t>();
+                eth_set_chain_id(chain_id);
             }
         } else {
             if (action != "transfer"_n.value) {
@@ -149,7 +152,7 @@ extern "C" {
                 if (t.to == _self && t.quantity.symbol == symbol(MAIN_TOKEN_NAME, 4) && t.memo == "deposit") {
                     eth_address address;
                     bool ret = eth_account_find_address_by_creator(t.from.value, address);
-                    check(ret, "eth address not bind to an EOS account!!");
+                    check(ret, "eth address not bind to an EOS account!");
                     asset a(0, symbol(MAIN_TOKEN_NAME, 4));
                     a.amount = eth_account_get_balance(address);
                     eosio::print("+++++eth amount:", a.amount);
