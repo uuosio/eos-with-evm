@@ -48,7 +48,7 @@ cd evm4eosio
 ## Start a Local Testnet
 
 ```
-./nodeos/nodeos --http-max-response-time-ms 50 --data-dir dd --config-dir cd --wasm-runtime eos-vm-jit --contracts-console -p eosio -e --plugin eosio::producer_plugin --plugin eosio::chain_api_plugin --plugin eosio::producer_api_plugin --plugin eosio::contract_api_plugin
+./nodeos/nodeos --http-server-address 127.0.0.1:8888 --p2p-listen-endpoint 127.0.0.1:8801 --verbose-http-errors --http-max-response-time-ms 50 --data-dir dd --config-dir cd --wasm-runtime eos-vm-jit --contracts-console -p eosio -e --plugin eosio::producer_plugin --plugin eosio::chain_api_plugin --plugin eosio::contract_api_plugin 
 ```
 
 ## Clone Solidity Examples From Github
