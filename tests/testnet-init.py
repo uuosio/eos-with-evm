@@ -187,7 +187,7 @@ if eosapi.get_balance('hello') <=0:
 
 balance = eosapi.get_balance('hello')
 logger.info(f'++++balance: {balance}')
-while True:
+while False:
     n = random.randint(0,10000000)
     elapsed = 0
     for i in range(n, n+10):
