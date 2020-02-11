@@ -144,3 +144,4 @@ _transaction_size
 _vm_register_api
 _is_feature_activated
 _preactivate_feature
+_set_action_return_value
