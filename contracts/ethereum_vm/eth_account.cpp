@@ -11,44 +11,10 @@
 #include <eosio/fixed_bytes.hpp>
 
 #include <eosio/system.hpp>
+#include <vector>
 
+using namespace std;
 using namespace eosio;
-
-extern "C" {
-    __attribute__((eosio_wasm_import))
-    uint32_t db_get_table_count(uint64_t a, uint64_t b, uint64_t c);
-
-    __attribute__((eosio_wasm_import))
-    int32_t db_store_i256( uint64_t scope, uint64_t table, uint64_t payer, void* id, int size, const char* buffer, size_t buffer_size );
-
-    __attribute__((eosio_wasm_import))
-    void db_update_i256( int iterator, uint64_t payer, const char* buffer, size_t buffer_size );
-
-    __attribute__((eosio_wasm_import))
-    void db_remove_i256( int iterator );
-
-    __attribute__((eosio_wasm_import))
-    int32_t db_get_i256( int iterator, char* buffer, size_t buffer_size );
-
-    __attribute__((eosio_wasm_import))
-    int32_t db_find_i256( uint64_t code, uint64_t scope, uint64_t table, void* id, size_t size );
-
-    __attribute__((eosio_wasm_import))
-    int db_previous_i256( int itr, void* primary, size_t id_size );
-
-    __attribute__((eosio_wasm_import))
-    int db_next_i256( int itr, void* primary, size_t id_size );
-
-    __attribute__((eosio_wasm_import))
-    int db_lowerbound_i256( uint64_t code, uint64_t scope, uint64_t table, void* id, size_t id_size );
-
-    __attribute__((eosio_wasm_import))
-    int db_upperbound_i256( uint64_t code, uint64_t scope, uint64_t table, void* id, size_t id_size );
-}
-
-#include <string>
-#include <algorithm>
-#include <iterator>
 
 struct [[eosio::table]] ethaccount {
     uint64_t                        index;
@@ -72,6 +38,31 @@ struct [[eosio::table]] ethaccount {
     EOSLIB_SERIALIZE( ethaccount, (index)(creator)(ram_quota)(nonce)(address)(balance)(code) )
 };
 
+struct [[eosio::table]] account_state {
+    uint64_t                        index;
+    checksum256                     key;
+    checksum256                     value;
+    uint64_t primary_key() const { return index; }
+    checksum256 get_secondary() const {
+       return key;
+    }
+    EOSLIB_SERIALIZE( account_state, (index)(key)(value) )
+};
+
+struct [[eosio::table]] ethcode {
+    uint64_t                        index;
+    std::array<unsigned char, 20>   address;
+    vector<char>                    code;
+    uint64_t primary_key() const { return index; }
+    checksum256 get_secondary() const {
+       auto ret = checksum256();
+       memset(ret.data(), 0, sizeof(checksum256));
+       memcpy(ret.data(), address.data(), 20);
+       return ret;
+    }
+    EOSLIB_SERIALIZE( ethcode, (index)(address)(code) )
+};
+
 struct [[eosio::table]] addressmap {
     uint64_t                        creator;
     std::array<unsigned char, 20>   address;
@@ -86,7 +77,23 @@ struct [[eosio::table]] accountcounter {
     EOSLIB_SERIALIZE( accountcounter, (count)(chain_id) )
 };
 
+/*
+used to map 256 bit key to 64 bit primary key, 
+there's no need to worry about the counter overflow, 
+the reason is:
+let's suppose we can do one store/delete operation in 1us,
+that means we can do 1000,000 operation in 1s,
+and it need about 584942.4(0xffffffffffffffff/1000000/60/60/24/365) years to overflow the counter
+that's safe enough
+*/
+struct [[eosio::table]] key256counter {
+    uint64_t                        count;
+    EOSLIB_SERIALIZE( key256counter, (count) )
+};
+
 typedef eosio::singleton< "global"_n, accountcounter >   account_counter;
+typedef eosio::singleton< "global2"_n, key256counter >   key256_counter;
+
 
 typedef multi_index<"addressmap"_n, addressmap> addressmap_table;
 
@@ -95,6 +102,15 @@ typedef multi_index<"ethaccount"_n,
                 indexed_by< "bysecondary"_n,
                 const_mem_fun<ethaccount, checksum256, &ethaccount::get_secondary> > > ethaccount_table;
 
+typedef multi_index<"accountstate"_n,
+                account_state,
+                indexed_by< "bysecondary"_n,
+                const_mem_fun<account_state, checksum256, &account_state::get_secondary> > > account_state_table;
+
+typedef multi_index<"ethcode"_n,
+                ethcode,
+                indexed_by< "bysecondary"_n,
+                const_mem_fun<ethcode, checksum256, &ethcode::get_secondary> > > ethcode_table;
 
 void eth_set_chain_id(int32_t chain_id) {
     uint64_t code = current_receiver().value;
@@ -110,11 +126,22 @@ void eth_set_chain_id(int32_t chain_id) {
     counter.set(a, name(payer));
 }
 
-int32_t eth_get_chain_id() {
+uint64_t get_next_key256_index(uint64_t payer) {
     uint64_t code = current_receiver().value;
     uint64_t scope = code;
 
-    uint64_t payer = current_receiver().value;
+    key256_counter counter(name(code), scope);
+
+    key256counter a = {0};
+    a = counter.get_or_default(a);
+    a.count += 1;
+    counter.set(a, name(payer));
+    return a.count;
+}
+
+int32_t eth_get_chain_id() {
+    uint64_t code = current_receiver().value;
+    uint64_t scope = code;
 
     account_counter counter(name(code), scope);
 
@@ -287,6 +314,26 @@ uint64_t eth_account_get_info(eth_address& address, int32_t* nonce, int64_t* ram
     return idx->index;;
 }
 
+bool eth_account_get_creator_and_index(eth_address& address, uint64_t& creator, uint64_t& index) {
+    uint64_t code = current_receiver().value;
+    uint64_t scope = code;
+
+    checksum256 _address;
+    memset(_address.data(), 0, sizeof(checksum256));
+    memcpy(_address.data(), address.data(), 20);
+
+    ethaccount_table mytable(name(code), scope);
+    auto idx_sec = mytable.get_index<"bysecondary"_n>();
+
+    auto idx = idx_sec.find(_address);
+    if (idx == idx_sec.end()) {
+        return false;
+    }
+    creator = idx->creator;
+    index = idx->index;
+    return true;
+}
+
 bool eth_account_set_info(eth_address& address, int32_t nonce, int64_t ram_quota, int64_t amount) {
     uint64_t code = current_receiver().value;
     uint64_t scope = code;
@@ -338,7 +385,6 @@ bool eth_account_set_info(eth_address& address, int32_t nonce, int64_t ram_quota
 bool eth_account_get(eth_address& address, ethaccount& account) {
     uint64_t code = current_receiver().value;
     uint64_t scope = code;
-    uint64_t table = "ethaccount"_n.value;
 
     checksum256 _address;
     memset(_address.data(), 0, sizeof(checksum256));
@@ -402,8 +448,6 @@ int64_t eth_account_get_balance(eth_address& address) {
     uint64_t code = current_receiver().value;
     uint64_t scope = code;
 
-    uint64_t payer = current_receiver().value;
-
     checksum256 _address;
     memset(_address.data(), 0, sizeof(checksum256));
     memcpy(_address.data(), address.data(), 20);
@@ -461,45 +505,70 @@ bool eth_account_set_code_bk(eth_address& address, const std::vector<unsigned ch
     return eth_account_set(address, account);
 }
 
-#define CODE_TABLE_NAME 0xFFFFFFFFFFFFFFFF
 bool eth_account_get_code(eth_address& address, std::vector<unsigned char>& evm_code) {
+    uint64_t creator;
+    uint64_t index;
+    bool ret = eth_account_get_creator_and_index(address, creator, index);
+    if (!ret) {
+        return false;
+    }
+
+    require_auth(name(creator));
+    
     uint64_t code = current_receiver().value;
-    uint64_t scope = code;
-    key256 key;
-    memset(key.data(), 0, 32);
-    memcpy(key.data(), address.data(), 20);
 
-    int itr = db_find_i256(code, scope, CODE_TABLE_NAME, key.data(), 32);
-    if (itr < 0) {
+    checksum256 _address;
+    memset(_address.data(), 0, sizeof(checksum256));
+    memcpy(_address.data(), address.data(), 20);
+
+    ethcode_table mytable(name(code), creator);
+    auto itr = mytable.find(index);
+    if (itr == mytable.end()) {
         return false;
     }
 
-    int size = db_get_i256(itr, nullptr, 0);
-    if (size <= 0) {
-        return false;
-    }
-
-    evm_code.resize(size);
-    db_get_i256(itr, (char *)evm_code.data(), size);
-
+    evm_code.resize(itr->code.size());
+    memcpy(evm_code.data(), itr->code.data(), evm_code.size());
     return true;
 }
 
 bool eth_account_set_code(eth_address& address, const std::vector<unsigned char>& evm_code) {
-    uint64_t code = current_receiver().value;
-    uint64_t scope = code;
-    uint64_t payer = code;
-
-    key256 key;
-    memset(key.data(), 0, 32);
-    memcpy(key.data(), address.data(), 20);
-
-    int itr = db_find_i256(code, scope, CODE_TABLE_NAME, key.data(), 32);
-    if (itr < 0) {
-        db_store_i256(scope, CODE_TABLE_NAME, payer, (char*)key.data(), 32, (char *)evm_code.data(), evm_code.size());
-    } else {
-        db_update_i256(itr, payer, (char *)evm_code.data(), evm_code.size());
+    uint64_t creator;
+    uint64_t index;
+    bool ret = eth_account_get_creator_and_index(address, creator, index);
+    if (!ret) {
+        return false;
     }
+    require_auth(name(creator));
+    
+    uint64_t code = current_receiver().value;
+
+    checksum256 _address;
+    memset(_address.data(), 0, sizeof(checksum256));
+    memcpy(_address.data(), address.data(), 20);
+
+    ethcode_table mytable(name(code), creator);
+    auto idx_sec = mytable.get_index<"bysecondary"_n>();
+
+    checksum256 _key;
+    memcpy(_key.data(), address.data(), 20);
+
+    auto itr = idx_sec.find(_key);
+    if (itr == idx_sec.end()) {
+        mytable.emplace( name(creator), [&]( auto& row ) {
+            row.index = index;
+            row.address = address;
+            row.code.resize(evm_code.size());
+            memcpy(row.code.data(), evm_code.data(), evm_code.size());
+        });
+    } else {
+        auto itr2 = mytable.find(itr->index);
+        mytable.modify( itr2, name(creator), [&]( auto& row ) {
+            row.code.resize(evm_code.size());
+            memcpy(row.code.data(), evm_code.data(), evm_code.size());
+        });
+    }
+
     return true;
 }
 
@@ -527,53 +596,97 @@ uint64_t eth_account_get_index(eth_address& address) {
 }
 
 bool eth_account_get_value(eth_address& address, key256& key, value256& value) {
-    uint64_t index = eth_account_get_index(address);
-    if (index == 0) {
+    uint64_t creator;
+    uint64_t index;
+    bool ret = eth_account_get_creator_and_index(address, creator, index);
+    if (!ret) {
         return false;
     }
+    
     uint64_t code = current_receiver().value;
-    uint64_t scope = code;
-    int itr = db_find_i256(code, scope, index, key.data(), 32);
-    if (itr < 0) {
-        return false;
-    }
 
-    int size = db_get_i256(itr, (char*)value.data(), 32);
-    check(size == 32, "bad storage!");
+    checksum256 _address;
+    memset(_address.data(), 0, sizeof(checksum256));
+    memcpy(_address.data(), address.data(), 20);
+
+    account_state_table mytable(name(code), creator);
+    auto idx_sec = mytable.get_index<"bysecondary"_n>();
+
+    checksum256 _key;
+    memcpy(_key.data(), key.data(), 32);
+
+    auto itr = idx_sec.find(_key);
+    if (itr != idx_sec.end()) {
+        memcpy(value.data(), itr->value.data(), 32);
+    } else {
+        memset(value.data(), 0, 32);
+    }
+//    always return true
     return true;
 }
 
 bool eth_account_set_value(eth_address& address, key256& key, value256& value) {
-    uint64_t index = eth_account_get_index(address);
-    if (index == 0) {
+    uint64_t creator;
+    uint64_t index;
+    bool ret = eth_account_get_creator_and_index(address, creator, index);
+    if (!ret) {
         return false;
     }
+    require_auth(name(creator));
+    
     uint64_t code = current_receiver().value;
-    uint64_t scope = code;
-    uint64_t payer = code;
 
-    int itr = db_find_i256(code, scope, index, key.data(), 32);
-    if (itr < 0) {
-        db_store_i256(scope, index, payer, (char*)key.data(), 32, (char*)value.data(), 32);
+    checksum256 _address;
+    memset(_address.data(), 0, sizeof(checksum256));
+    memcpy(_address.data(), address.data(), 20);
+
+    account_state_table mytable(name(code), creator);
+    auto idx_sec = mytable.get_index<"bysecondary"_n>();
+
+    checksum256 _key;
+    memcpy(_key.data(), key.data(), 32);
+
+    auto itr = idx_sec.find(_key);
+    if (itr == idx_sec.end()) {
+        mytable.emplace( name(creator), [&]( auto& row ) {
+            uint64_t key256_index = get_next_key256_index(creator);
+            row.index = key256_index;
+            memcpy(row.key.data(), key.data(), 32);
+            memcpy(row.value.data(), value.data(), 32);
+        });
     } else {
-        db_update_i256(itr, payer, (char*)value.data(), 32);
+        auto itr2 = mytable.find(itr->index);
+        mytable.modify( itr2, name(creator), [&]( auto& row ) {
+            memcpy(row.value.data(), value.data(), 32);
+        });
     }
+
     return true;
 }
 
 bool eth_account_clear_value(eth_address& address, key256& key) {
-    uint64_t index = eth_account_get_index(address);
-    if (index == 0) {
+    uint64_t creator;
+    uint64_t index;
+    bool ret = eth_account_get_creator_and_index(address, creator, index);
+    if (!ret) {
         return false;
     }
-    uint64_t code = current_receiver().value;
-    uint64_t scope = code;
 
-    int itr = db_find_i256(code, scope, index, key.data(), 32);
-    if (itr < 0) {
+    uint64_t code = current_receiver().value;
+
+    checksum256 _address;
+    memset(_address.data(), 0, sizeof(checksum256));
+    memcpy(_address.data(), address.data(), 20);
+
+    account_state_table mytable(name(code), creator);
+    auto idx_sec = mytable.get_index<"bysecondary"_n>();
+
+    auto itr = idx_sec.find(_address);
+    if (itr == idx_sec.end()) {
         return false;
     } else {
-        db_remove_i256(itr);
-        return true;
+        auto itr2 = mytable.find(itr->index);
+        mytable.erase(itr2);
     }
+    return true;
 }
