@@ -21,11 +21,14 @@ else()
 #  add_subdirectory(test-contracts)
 endif()
 
+set(EOSIOLIB_NATIVE "${CMAKE_BINARY_DIR}/contracts/vm_api/libvm_api${CMAKE_SHARED_LIBRARY_SUFFIX}")
+set(ETH_ACCOUNT_NATIVE "${CMAKE_BINARY_DIR}/contracts/ethereum_vm/libethereum_vm.a")
+
 ExternalProject_Add(
    aleth
    SOURCE_DIR ${CMAKE_SOURCE_DIR}/externals/aleth
-   BINARY_DIR ${CMAKE_BINARY_DIR}/aleth
-#   CMAKE_ARGS -DBUILD_SHARED_LIBS=true #-DCMAKE_TOOLCHAIN_FILE=${EOSIO_CDT_ROOT}/lib/cmake/eosio.cdt/EosioWasmToolchain.cmake
+   BINARY_DIR ${CMAKE_BINARY_DIR}/externals/aleth
+   CMAKE_ARGS -DEOSIOLIB_NATIVE=${EOSIOLIB_NATIVE} -DETH_ACCOUNT_NATIVE=${ETH_ACCOUNT_NATIVE} #-DBUILD_SHARED_LIBS=true #-DCMAKE_TOOLCHAIN_FILE=${EOSIO_CDT_ROOT}/lib/cmake/eosio.cdt/EosioWasmToolchain.cmake
    UPDATE_COMMAND ""
    PATCH_COMMAND ""
    TEST_COMMAND ""
