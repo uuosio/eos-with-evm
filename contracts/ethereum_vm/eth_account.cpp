@@ -78,11 +78,11 @@ struct [[eosio::table]] accountcounter {
 };
 
 /*
-used to map 256 bit key to 64 bit primary key, 
+This struct used to map 256 bit key to 64 bit primary key, 
 there's no need to worry about the counter overflow, 
 the reason is:
 let's suppose we can do one store/delete operation in 1us,
-that means we can do 1000,000 operation in 1s,
+that means we can do 1000,000 operations in 1s,
 and it need about 584942.4(0xffffffffffffffff/1000000/60/60/24/365) years to overflow the counter
 that's safe enough
 */
@@ -485,24 +485,6 @@ bool eth_account_set_balance(eth_address& address, int64_t amount) {
         });
     }
     return true;
-}
-
-bool eth_account_get_code_bk(eth_address& address, std::vector<unsigned char>& code) {
-    ethaccount account;
-    if (!eth_account_get(address, account)) {
-        return false;
-    }
-    code = account.code;
-    return true;
-}
-
-bool eth_account_set_code_bk(eth_address& address, const std::vector<unsigned char>& code) {
-    ethaccount account;
-    if (!eth_account_get(address, account)) {
-        return 0;
-    }
-    account.code = code;
-    return eth_account_set(address, account);
 }
 
 bool eth_account_get_code(eth_address& address, std::vector<unsigned char>& evm_code) {
