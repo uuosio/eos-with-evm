@@ -4,19 +4,19 @@ set(EOSIO_WASM_OLD_BEHAVIOR "Off")
 find_package( eosio.cdt REQUIRED )
 
 add_contract(ethereum_vm ethereum_vm 
-    ${CMAKE_SOURCE_DIR}/externals/aleth/evm4eos/ethereum_vm.cpp
+    ${CMAKE_SOURCE_DIR}/../../externals/aleth/evm4eos/ethereum_vm.cpp
 )
 
 target_include_directories(ethereum_vm
    PUBLIC
-   ${CMAKE_SOURCE_DIR}/externals/aleth/evm4eos
+   ${CMAKE_SOURCE_DIR}/../../externals/aleth/evm4eos
 )
 
 set_target_properties(ethereum_vm
    PROPERTIES
    RUNTIME_OUTPUT_DIRECTORY "${CMAKE_CURRENT_BINARY_DIR}")
 
-configure_file( ${CMAKE_SOURCE_DIR}/externals/aleth/evm4eos/ethereum_vm.abi ${CMAKE_CURRENT_BINARY_DIR}/ethereum_vm.abi @COPYONLY )
+configure_file( ${CMAKE_SOURCE_DIR}/../../externals/aleth/evm4eos/ethereum_vm.abi ${CMAKE_CURRENT_BINARY_DIR}/ethereum_vm.abi @COPYONLY )
 
 else()
 
