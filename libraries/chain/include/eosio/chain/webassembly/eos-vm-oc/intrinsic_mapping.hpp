@@ -251,6 +251,7 @@ constexpr auto intrinsic_table = boost::hana::make_tuple(
    "eosio_injection._eosio_ui64_to_f64"_s,
    "env.set_action_return_value"_s,
    "env.evm_execute"_s,
+   "env.evm_recover_key"_s,
    "env.evm_get_account_id"_s,
    "env.db_store_i256"_s,
    "env.db_update_i256"_s,

@@ -30,6 +30,7 @@
 extern "C" {
    int evm_get_account_id(const char* account, size_t account_size, const char* arbitrary_string, size_t arbitrary_string_size, char* hash, size_t hash_size);
    int evm_execute(const char *raw_trx, size_t raw_trx_size, const char *sender_address, size_t sender_address_size);
+   int evm_recover_key(const uint8_t* _sig, uint32_t _sig_size, const uint8_t* _message, uint32_t _message_len, uint8_t* _serialized_public_key, uint32_t _serialized_public_key_size);
 }
 
 #if defined(EOSIO_EOS_VM_RUNTIME_ENABLED) || defined(EOSIO_EOS_VM_JIT_RUNTIME_ENABLED)
@@ -1159,6 +1160,10 @@ class action_api : public context_aware_api {
          return ::evm_execute(trx.value, size, sender_address, sender_address_size);
       }
 
+      int evm_recover_key(array_ptr<char> _sig, uint32_t _sig_size, array_ptr<char> _message, uint32_t _message_len, array_ptr<char> _serialized_public_key, uint32_t _serialized_public_key_size) {
+         return ::evm_recover_key((const uint8_t*)_sig.value, _sig_size, (const uint8_t*)_message.value, _message_len, (uint8_t*)_serialized_public_key.value, _serialized_public_key_size);
+      }
+
       int evm_get_account_id(uint64_t account, array_ptr<char> arbitrary_string, uint32_t arbitrary_string_size, array_ptr<char> hash, uint32_t hash_size) {
          string _account = account_name(account).to_string();
          return ::evm_get_account_id(_account.c_str(), _account.size(), arbitrary_string.value, arbitrary_string_size, hash.value, hash_size);
@@ -2088,6 +2093,7 @@ REGISTER_INTRINSICS(action_api,
    (current_receiver,         int64_t()      )
    (set_action_return_value,  void(int, int) )
    (evm_execute,              int(int, int, int, int)  )
+   (evm_recover_key,              int(int, int, int, int, int, int)  )
    (evm_get_account_id,       int(int64_t, int, int, int, int)  )
 );
 
