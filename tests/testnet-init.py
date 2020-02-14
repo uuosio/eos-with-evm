@@ -87,13 +87,12 @@ def create_system_accounts():
         'eosio.token',
         'eosio.vpay',
         'eosio.rex',
-
-        'eosio.jit',
-        'eosio.jitfee',
         'hello',
-        'helloworld12',
         'helloworld11',
+        'helloworld12',
         'helloworld13',
+        'helloworld14',
+        'helloworld15',
         'helloworld33',
     ]
     newaccount = {'creator': 'eosio',
@@ -184,6 +183,12 @@ if eosapi.get_balance('helloworld12') <=0:
 
 if eosapi.get_balance('hello') <=0:
     r = eosapi.push_action('eosio.token', 'transfer', {"from":"eosio", "to":"hello","quantity":f"10000000.0000 {config.main_token}","memo":""}, {'eosio':'active'})
+
+for account in  ('helloworld11', 'helloworld12', 'helloworld13', 'helloworld14', 'helloworld15'):
+    eosapi.transfer('eosio', account, 1000.0)
+    util.buyrambytes('eosio', account, 2*1024*1024)
+    util.dbw('eosio', account, 1.0, 1000)
+
 
 balance = eosapi.get_balance('hello')
 logger.info(f'++++balance: {balance}')
