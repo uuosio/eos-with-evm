@@ -186,9 +186,8 @@ if eosapi.get_balance('hello') <=0:
 
 for account in  ('helloworld11', 'helloworld12', 'helloworld13', 'helloworld14', 'helloworld15'):
     eosapi.transfer('eosio', account, 1000.0)
-    util.buyrambytes('eosio', account, 2*1024*1024)
+    util.buyrambytes('eosio', account, 5*1024*1024)
     util.dbw('eosio', account, 1.0, 1000)
-
 
 balance = eosapi.get_balance('hello')
 logger.info(f'++++balance: {balance}')
