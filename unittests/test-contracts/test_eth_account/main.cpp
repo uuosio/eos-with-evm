@@ -8,7 +8,7 @@
 using namespace eosio;
 
 __attribute__((eosio_wasm_import))
-int evm_execute(const char *raw_trx, size_t raw_trx_size, const char *sender_address, size_t sender_address_size);
+extern "C" int evm_execute(const char *raw_trx, size_t raw_trx_size, const char *sender_address, size_t sender_address_size);
 
 extern "C" void apply(uint64_t receiver, uint64_t code, uint64_t action) {
    //2c7536E3605D9C16a7a3D7b1898e529396a65c23
@@ -30,12 +30,13 @@ extern "C" void apply(uint64_t receiver, uint64_t code, uint64_t action) {
 
       check(!eth_account_set_value(eth_address1, key, value), "eth_account_set_value should return false before an ethereum account created");
 
-      bool ret = eth_account_create(eth_address1, 0);
+      uint64_t creator = current_receiver().value;
+      bool ret = eth_account_create(eth_address1, creator);
       check(ret, "eth_account_create failed");
       ret = eth_account_exists(eth_address1);
       check(ret, "account does not exists");
 
-      ret = eth_account_create(eth_address2);
+      ret = eth_account_create(eth_address2, creator);
       check(ret, "eth_account_create failed");
       ret = eth_account_exists(eth_address2);
       check(ret, "account does not exists");
@@ -47,9 +48,9 @@ extern "C" void apply(uint64_t receiver, uint64_t code, uint64_t action) {
       ret = eth_account_get_code(eth_address3, code);
       check(ret == false, "eth_account_get_code expected to return false");
 
-      eth_account_create(eth_address3);
+      eth_account_create(eth_address3, creator);
       ret = eth_account_get_code(eth_address3, code);
-      check(ret, "eth_account_get_code expected to return true");
+      check(!ret, "eth_account_get_code expected to return false");
 
       check(code.size() == 0, "code size should be 0");
 
@@ -77,42 +78,45 @@ extern "C" void apply(uint64_t receiver, uint64_t code, uint64_t action) {
       uint32_t nonce = 0;
       ret = eth_account_get_nonce(eth_address1, nonce);
       check(ret == true, "bad eth_account_get_nonce return");
-      check(nonce == 0, "bad eth_account_get_nonce return");
+      check(nonce == 1, "eth_account_get_nonce return bad nonce");
 
-      nonce = 1;
+      nonce = 2;
       eth_account_set_nonce(eth_address1, nonce);
       ret = eth_account_get_nonce(eth_address1, nonce);
-      check(ret == true, "bad eth_account_get_nonce return");
-      check(nonce == 1, "bad eth_account_get_nonce return");
+      check(ret == true, "bad eth_account_get_nonce return value");
+      check(nonce == 2, "eth_account_get_nonce return bad nonce");
 
    } else if (action == "testexists"_n.value) {
-      bool ret = eth_account_create(eth_address1);
+      uint64_t creator = current_receiver().value;
+      bool ret = eth_account_create(eth_address1, creator);
       check(!ret, "eth_account_create should return false");
       ret = eth_account_exists(eth_address1);
       check(ret, "account does not exists");
    } else if (action == "testsetcode"_n.value) {
       unsigned char sender_address[] = {0x2c, 0x75, 0x36, 0xe3, 0x60, 0x5d, 0x9c, 0x16, 0xa7, 0xa3, 0xd7, 0xb1, 0x89, 0x8e, 0x52, 0x93, 0x96, 0xa6, 0x5c, 0x23};
-      unsigned char *_addr = (unsigned char *)"\xc0\xaa\xe1\xed\xd7\xa7\x6c\x8c\xf9\x9e\x5b\xa3\xca\x69\x59\x9e\xd2\x95\x40\xea";
+      unsigned char _addr[] = {0x22,0xe0,0x11,0x4b,0xea,0xe1,0x69,0x7b,0xbf,0x52,0x48,0x83,0x1f,0x31,0x10,0xc3,0x8a,0xd4,0xa9,0x8b};
 
       eth_address addr;
       memcpy(addr.data(), sender_address, 20);
+
+      uint64_t creator = current_receiver().value;
       //create account first
-      bool ret = eth_account_create(addr);
+      bool ret = eth_account_create(addr, creator);
       check(ret, "+++eth_account_create return false");
-      std::vector<unsigned char> code;
+      std::vector<char> code;
       int32_t code_size = eosio::action_data_size();
       code.resize(code_size);
       eosio::read_action_data(code.data(), code_size);
-      evm_execute(code.data(), code_size, sender_address, 20);
+      evm_execute(code.data(), code_size, (char *)sender_address, 20);
 
       memcpy(addr.data(), _addr, 20);
       check(eth_account_exists(addr), "account should exists");
    } else if (action == "testcall"_n.value) {
-      std::vector<unsigned char> code;
+      std::vector<char> code;
       int32_t code_size = eosio::action_data_size();
       code.resize(code_size);
       eosio::read_action_data(code.data(), code_size);
       eth_address addr;
-      evm_execute(code.data(), code_size, addr.data(), 20);
+      evm_execute(code.data(), code_size, (char *)addr.data(), 20);
    }
 }
