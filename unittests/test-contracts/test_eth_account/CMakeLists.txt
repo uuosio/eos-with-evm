@@ -1,7 +1,7 @@
 if( EOSIO_COMPILE_TEST_CONTRACTS )
    add_contract( test_eth_account test_eth_account main.cpp ${CMAKE_SOURCE_DIR}/../../externals/aleth/evm4eos/eth_account.cpp )
 
-   target_compile_definitions(test_eth_account PRIVATE USE_INTRINSIC_EVM_RECOVER_KEY USE_INTRINSIC_EVM_GET_ACCOUNT_ID)
+   target_compile_definitions(test_eth_account PRIVATE USE_INTRINSIC_EVM_API)
 
    target_include_directories(test_eth_account PRIVATE 
       PRIVATE ${CMAKE_SOURCE_DIR}/../../externals/aleth/evm4eos
