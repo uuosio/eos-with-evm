@@ -5,6 +5,7 @@ find_package( eosio.cdt REQUIRED )
 
 add_contract(ethereum_vm ethereum_vm 
     ${CMAKE_SOURCE_DIR}/../../externals/aleth/evm4eos/ethereum_vm.cpp
+    ${CMAKE_SOURCE_DIR}/../../externals/aleth/evm4eos/eth_account.cpp
 )
 
 target_include_directories(ethereum_vm
