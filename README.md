@@ -55,4 +55,4 @@ Please see readme in https://github.com/learnforpractice/eos-with-evm-demo
 
 # License
 
-[MIT](./LICENSE) 
+[GPL](./LICENSE)
