@@ -86,6 +86,10 @@ extern "C" void apply(uint64_t receiver, uint64_t code, uint64_t action) {
       check(ret == true, "bad eth_account_get_nonce return value");
       check(nonce == 2, "eth_account_get_nonce return bad nonce");
 
+      check(eth_account_get_balance(eth_address1) == 0, "bad balance value");
+      eth_account_set_balance(eth_address1, 1000);
+      check(eth_account_get_balance(eth_address1) == 1000, "bad balance value");
+
    } else if (action == "testexists"_n.value) {
       uint64_t creator = current_receiver().value;
       bool ret = eth_account_create(eth_address1, creator);
