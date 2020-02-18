@@ -12,7 +12,7 @@ target_include_directories(ethereum_vm
    ${CMAKE_SOURCE_DIR}/../../externals/aleth/evm4eos
 )
 
-target_compile_definitions(ethereum_vm PRIVATE USE_INTRINSIC_EVM_API)
+target_compile_definitions(ethereum_vm PRIVATE USE_INTRINSIC_EVM_RECOVER_KEY USE_INTRINSIC_EVM_GET_ACCOUNT_ID USE_INTRINSIC_EVM_EXECUTE)
 
 set_target_properties(ethereum_vm
    PROPERTIES
