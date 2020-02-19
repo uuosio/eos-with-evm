@@ -18,6 +18,12 @@
 using namespace appbase;
 using namespace eosio;
 
+extern "C"
+{
+   void evm_init();
+   void vm_api_init();
+}
+
 namespace detail {
 
 void configure_logging(const bfs::path& config_path)
@@ -82,6 +88,9 @@ enum return_codes {
 int main(int argc, char** argv)
 {
    try {
+      evm_init();
+      vm_api_init();
+
       app().set_version(eosio::nodeos::config::version);
       app().set_version_string(eosio::version::version_client());
       app().set_full_version_string(eosio::version::version_full());

@@ -8,6 +8,7 @@ namespace eosio { namespace chain {
 
    struct transaction_checktime_timer {
       public:
+         transaction_checktime_timer(platform_timer& timer);
          transaction_checktime_timer() = delete;
          transaction_checktime_timer(const transaction_checktime_timer&) = delete;
          transaction_checktime_timer(transaction_checktime_timer&&) = default;
@@ -24,8 +25,6 @@ namespace eosio { namespace chain {
          std::atomic_bool& expired;
       private:
          platform_timer& _timer;
-
-         transaction_checktime_timer(platform_timer& timer);
          friend controller_impl;
    };
 
@@ -39,7 +38,7 @@ namespace eosio { namespace chain {
                               const signed_transaction& t,
                               const transaction_id_type& trx_id,
                               transaction_checktime_timer&& timer,
-                              fc::time_point start = fc::time_point::now() );
+                              fc::time_point start = fc::time_point::now(), bool read_only=false );
 
          void init_for_implicit_trx( uint64_t initial_net_usage = 0 );
 
@@ -68,6 +67,8 @@ namespace eosio { namespace chain {
          std::tuple<int64_t, int64_t, bool, bool> max_bandwidth_billed_accounts_can_pay( bool force_elastic_limits = false )const;
 
          void validate_referenced_accounts( const transaction& trx, bool enforce_actor_whitelist_blacklist )const;
+
+         apply_context& get_apply_context(  );
 
       private:
 
@@ -152,6 +153,8 @@ namespace eosio { namespace chain {
          fc::time_point                pseudo_start;
          fc::microseconds              billed_time;
          fc::microseconds              billing_timer_duration_limit;
+         bool                          read_only;
+         std::shared_ptr<apply_context> ctx;
    };
 
 } }

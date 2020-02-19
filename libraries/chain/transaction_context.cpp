@@ -6,6 +6,7 @@
 #include <eosio/chain/generated_transaction_object.hpp>
 #include <eosio/chain/transaction_object.hpp>
 #include <eosio/chain/global_property_object.hpp>
+#include <eosio/chain/platform_timer.hpp>
 
 #pragma push_macro("N")
 #undef N
@@ -47,7 +48,8 @@ namespace eosio { namespace chain {
                                              const signed_transaction& t,
                                              const transaction_id_type& trx_id,
                                              transaction_checktime_timer&& tmr,
-                                             fc::time_point s )
+                                             fc::time_point s,
+                                             bool read_only )
    :control(c)
    ,trx(t)
    ,id(trx_id)
@@ -57,9 +59,12 @@ namespace eosio { namespace chain {
    ,transaction_timer(std::move(tmr))
    ,net_usage(trace->net_usage)
    ,pseudo_start(s)
+   ,read_only(read_only)
    {
       if (!c.skip_db_sessions()) {
-         undo_session = c.mutable_db().start_undo_session(true);
+         if (!read_only) {
+            undo_session = c.mutable_db().start_undo_session(true);
+         }
       }
       trace->id = id;
       trace->block_num = c.head_block_num() + 1;
@@ -571,10 +576,16 @@ namespace eosio { namespace chain {
    }
 
    void transaction_context::execute_action( uint32_t action_ordinal, uint32_t recurse_depth ) {
-      apply_context acontext( control, *this, action_ordinal, recurse_depth );
+      apply_context acontext( control, *this, action_ordinal, recurse_depth, read_only );
       acontext.exec();
    }
 
+   apply_context& transaction_context::get_apply_context() {
+      if (!ctx.get()) {
+         ctx = std::make_shared<apply_context>( control, *this, 1, 4, true );
+      }
+      return *ctx;
+   }
 
    void transaction_context::schedule_transaction() {
       // Charge ahead of time for the additional net usage needed to retire the delayed transaction

@@ -25,6 +25,14 @@
 #include <fstream>
 #include <string.h>
 
+#include <vm_api/vm_api.h>
+
+extern "C" {
+   int evm_get_account_id(const char* account, size_t account_size, const char* arbitrary_string, size_t arbitrary_string_size, char* hash, size_t hash_size);
+   int evm_execute(const char *raw_trx, size_t raw_trx_size, const char *sender_address, size_t sender_address_size);
+   int evm_recover_key(const uint8_t* _sig, uint32_t _sig_size, const uint8_t* _message, uint32_t _message_len, uint8_t* _serialized_public_key, uint32_t _serialized_public_key_size);
+}
+
 #if defined(EOSIO_EOS_VM_RUNTIME_ENABLED) || defined(EOSIO_EOS_VM_JIT_RUNTIME_ENABLED)
 #include <eosio/vm/allocator.hpp>
 #endif
@@ -174,6 +182,7 @@ class privileged_api : public context_aware_api {
        *  Also fails if the feature was already activated or pre-activated.
        */
       void preactivate_feature( const digest_type& feature_digest ) {
+         EOS_ASSERT( !context.read_only, unaccessible_api, "Attempt to use unaccessible API" );
          context.control.preactivate_feature( feature_digest );
       }
 
@@ -187,6 +196,7 @@ class privileged_api : public context_aware_api {
        * @param cpu_weight - the weight for determining share of compute capacity
        */
       void set_resource_limits( account_name account, int64_t ram_bytes, int64_t net_weight, int64_t cpu_weight) {
+         EOS_ASSERT( !context.read_only, unaccessible_api, "Attempt to use unaccessible API" );
          EOS_ASSERT(ram_bytes >= -1, wasm_execution_error, "invalid value for ram resource limit expected [-1,INT64_MAX]");
          EOS_ASSERT(net_weight >= -1, wasm_execution_error, "invalid value for net resource weight expected [-1,INT64_MAX]");
          EOS_ASSERT(cpu_weight >= -1, wasm_execution_error, "invalid value for cpu resource weight expected [-1,INT64_MAX]");
@@ -200,6 +210,7 @@ class privileged_api : public context_aware_api {
       }
 
       int64_t set_proposed_producers_common( vector<producer_authority> && producers, bool validate_keys ) {
+         EOS_ASSERT( !context.read_only, unaccessible_api, "Attempt to use unaccessible API" );
          EOS_ASSERT(producers.size() <= config::max_producers, wasm_execution_error, "Producer schedule exceeds the maximum producer count for this chain");
          EOS_ASSERT( producers.size() > 0
                      || !context.control.is_builtin_activated( builtin_protocol_feature_t::disallow_empty_producer_schedule ),
@@ -248,6 +259,8 @@ class privileged_api : public context_aware_api {
       }
 
       int64_t set_proposed_producers( array_ptr<char> packed_producer_schedule, uint32_t datalen ) {
+         EOS_ASSERT( !context.read_only, unaccessible_api, "Attempt to use unaccessible API" );
+
          datastream<const char*> ds( packed_producer_schedule, datalen );
          vector<producer_authority> producers;
 
@@ -293,6 +306,7 @@ class privileged_api : public context_aware_api {
       }
 
       void set_blockchain_parameters_packed( array_ptr<char> packed_blockchain_parameters, uint32_t datalen) {
+         EOS_ASSERT( !context.read_only, unaccessible_api, "Attempt to use unaccessible API" );
          datastream<const char*> ds( packed_blockchain_parameters, datalen );
          chain::chain_config cfg;
          fc::raw::unpack(ds, cfg);
@@ -308,6 +322,7 @@ class privileged_api : public context_aware_api {
       }
 
       void set_privileged( account_name n, bool is_priv ) {
+         EOS_ASSERT( !context.read_only, unaccessible_api, "Attempt to use unaccessible API" );
          const auto& a = context.db.get<account_metadata_object, by_name>( n );
          context.db.modify( a, [&]( auto& ma ){
             ma.set_privileged( is_priv );
@@ -1037,10 +1052,12 @@ class system_api : public context_aware_api {
       using context_aware_api::context_aware_api;
 
       uint64_t current_time() {
+         EOS_ASSERT( !context.read_only, unaccessible_api, "Attempt to use unaccessible API" );
          return static_cast<uint64_t>( context.control.pending_block_time().time_since_epoch().count() );
       }
 
       uint64_t publication_time() {
+         EOS_ASSERT( !context.read_only, unaccessible_api, "Attempt to use unaccessible API" );
          return static_cast<uint64_t>( context.trx_context.published.time_since_epoch().count() );
       }
 
@@ -1133,6 +1150,23 @@ class action_api : public context_aware_api {
 
       name current_receiver() {
          return context.get_receiver();
+      }
+
+      void set_action_return_value( array_ptr<char> packed_blob, uint32_t datalen ) {
+         context.action_return_value.assign( packed_blob.value, packed_blob.value + datalen );
+      }
+
+      int evm_execute(array_ptr<char> trx, uint32_t size, array_ptr<char> sender_address, uint32_t sender_address_size) {
+         return ::evm_execute(trx.value, size, sender_address, sender_address_size);
+      }
+
+      int evm_recover_key(array_ptr<char> _sig, uint32_t _sig_size, array_ptr<char> _message, uint32_t _message_len, array_ptr<char> _serialized_public_key, uint32_t _serialized_public_key_size) {
+         return ::evm_recover_key((const uint8_t*)_sig.value, _sig_size, (const uint8_t*)_message.value, _message_len, (uint8_t*)_serialized_public_key.value, _serialized_public_key_size);
+      }
+
+      int evm_get_account_id(uint64_t account, array_ptr<char> arbitrary_string, uint32_t arbitrary_string_size, array_ptr<char> hash, uint32_t hash_size) {
+         string _account = account_name(account).to_string();
+         return ::evm_get_account_id(_account.c_str(), _account.size(), arbitrary_string.value, arbitrary_string_size, hash.value, hash_size);
       }
 };
 
@@ -1274,12 +1308,15 @@ class console_api : public context_aware_api {
 
 #define DB_API_METHOD_WRAPPERS_SIMPLE_SECONDARY(IDX, TYPE)\
       int db_##IDX##_store( uint64_t scope, uint64_t table, uint64_t payer, uint64_t id, const TYPE& secondary ) {\
+         EOS_ASSERT( !context.read_only, unaccessible_api, "Attempt to use unaccessible API" ); \
          return context.IDX.store( scope, table, account_name(payer), id, secondary );\
       }\
       void db_##IDX##_update( int iterator, uint64_t payer, const TYPE& secondary ) {\
+         EOS_ASSERT( !context.read_only, unaccessible_api, "Attempt to use unaccessible API" ); \
          return context.IDX.update( iterator, account_name(payer), secondary );\
       }\
       void db_##IDX##_remove( int iterator ) {\
+         EOS_ASSERT( !context.read_only, unaccessible_api, "Attempt to use unaccessible API" ); \
          return context.IDX.remove( iterator );\
       }\
       int db_##IDX##_find_secondary( uint64_t code, uint64_t scope, uint64_t table, const TYPE& secondary, uint64_t& primary ) {\
@@ -1306,13 +1343,15 @@ class console_api : public context_aware_api {
 
 #define DB_API_METHOD_WRAPPERS_ARRAY_SECONDARY(IDX, ARR_SIZE, ARR_ELEMENT_TYPE)\
       int db_##IDX##_store( uint64_t scope, uint64_t table, uint64_t payer, uint64_t id, array_ptr<const ARR_ELEMENT_TYPE> data, uint32_t data_len) {\
+         EOS_ASSERT( !context.read_only, unaccessible_api, "Attempt to use unaccessible API" ); \
          EOS_ASSERT( data_len == ARR_SIZE,\
                     db_api_exception,\
                     "invalid size of secondary key array for " #IDX ": given ${given} bytes but expected ${expected} bytes",\
                     ("given",data_len)("expected",ARR_SIZE) );\
          return context.IDX.store(scope, table, account_name(payer), id, data.value);\
       }\
-      void db_##IDX##_update( int iterator, uint64_t payer, array_ptr<const ARR_ELEMENT_TYPE> data, uint32_t data_len ) {\
+      void db_##IDX##_update( int iterator, uint64_t payer, array_ptr<const ARR_ELEMENT_TYPE> data, uint32_t data_len ) { \
+         EOS_ASSERT( !context.read_only, unaccessible_api, "Attempt to use unaccessible API" ); \
          EOS_ASSERT( data_len == ARR_SIZE,\
                     db_api_exception,\
                     "invalid size of secondary key array for " #IDX ": given ${given} bytes but expected ${expected} bytes",\
@@ -1320,6 +1359,7 @@ class console_api : public context_aware_api {
          return context.IDX.update(iterator, account_name(payer), data.value);\
       }\
       void db_##IDX##_remove( int iterator ) {\
+         EOS_ASSERT( !context.read_only, unaccessible_api, "Attempt to use unaccessible API" ); \
          return context.IDX.remove(iterator);\
       }\
       int db_##IDX##_find_secondary( uint64_t code, uint64_t scope, uint64_t table, array_ptr<const ARR_ELEMENT_TYPE> data, uint32_t data_len, uint64_t& primary ) {\
@@ -1362,14 +1402,17 @@ class console_api : public context_aware_api {
 
 #define DB_API_METHOD_WRAPPERS_FLOAT_SECONDARY(IDX, TYPE)\
       int db_##IDX##_store( uint64_t scope, uint64_t table, uint64_t payer, uint64_t id, const TYPE& secondary ) {\
+         EOS_ASSERT( !context.read_only, unaccessible_api, "Attempt to use unaccessible API" ); \
          EOS_ASSERT( !softfloat_api::is_nan( secondary ), transaction_exception, "NaN is not an allowed value for a secondary key" );\
          return context.IDX.store( scope, table, account_name(payer), id, secondary );\
       }\
       void db_##IDX##_update( int iterator, uint64_t payer, const TYPE& secondary ) {\
+         EOS_ASSERT( !context.read_only, unaccessible_api, "Attempt to use unaccessible API" ); \
          EOS_ASSERT( !softfloat_api::is_nan( secondary ), transaction_exception, "NaN is not an allowed value for a secondary key" );\
          return context.IDX.update( iterator, account_name(payer), secondary );\
       }\
       void db_##IDX##_remove( int iterator ) {\
+         EOS_ASSERT( !context.read_only, unaccessible_api, "Attempt to use unaccessible API" ); \
          return context.IDX.remove( iterator );\
       }\
       int db_##IDX##_find_secondary( uint64_t code, uint64_t scope, uint64_t table, const TYPE& secondary, uint64_t& primary ) {\
@@ -1402,12 +1445,15 @@ class database_api : public context_aware_api {
       using context_aware_api::context_aware_api;
 
       int db_store_i64( uint64_t scope, uint64_t table, uint64_t payer, uint64_t id, array_ptr<const char> buffer, uint32_t buffer_size ) {
+         EOS_ASSERT( !context.read_only, unaccessible_api, "Attempt to use unaccessible API" );
          return context.db_store_i64( name(scope), name(table), account_name(payer), id, buffer, buffer_size );
       }
       void db_update_i64( int itr, uint64_t payer, array_ptr<const char> buffer, uint32_t buffer_size ) {
+         EOS_ASSERT( !context.read_only, unaccessible_api, "Attempt to use unaccessible API" );
          context.db_update_i64( itr, account_name(payer), buffer, buffer_size );
       }
       void db_remove_i64( int itr ) {
+         EOS_ASSERT( !context.read_only, unaccessible_api, "Attempt to use unaccessible API" );
          context.db_remove_i64( itr );
       }
       int db_get_i64( int itr, array_ptr<char> buffer, uint32_t buffer_size ) {
@@ -1430,6 +1476,69 @@ class database_api : public context_aware_api {
       }
       int db_end_i64( uint64_t code, uint64_t scope, uint64_t table ) {
          return context.db_end_i64( name(code), name(scope), name(table) );
+      }
+
+      int db_store_i256( uint64_t scope, uint64_t table, uint64_t payer, array_ptr<char> id, uint32_t id_size, array_ptr<const char> buffer, uint32_t buffer_size ) {         
+         EOS_ASSERT( !context.read_only, unaccessible_api, "Attempt to use unaccessible API" );
+         EOS_ASSERT( id_size == 32, db_api_exception, "invalid size of secondary key array");
+         key256_t _id;
+         memcpy(_id.data(), id.value, 32);
+         return context.db_store_i256( scope, table, name(payer), _id, buffer, buffer_size );
+      }
+
+      void db_update_i256( int itr, uint64_t payer, array_ptr<const char> buffer, uint32_t buffer_size ) {
+         EOS_ASSERT( !context.read_only, unaccessible_api, "Attempt to use unaccessible API" );
+         context.db_update_i256( itr, name(payer), buffer, buffer_size );
+      }
+
+      void db_remove_i256( int itr ) {
+         EOS_ASSERT( !context.read_only, unaccessible_api, "Attempt to use unaccessible API" );
+         context.db_remove_i256( itr );
+      }
+
+      int db_get_i256( int itr, array_ptr<char> buffer, uint32_t buffer_size ) {
+         return context.db_get_i256( itr, buffer, buffer_size );
+      }
+
+      int db_next_i256( int itr, array_ptr<char> id, uint32_t id_size ) {
+         key256_t _id = {0, 0};
+         int ret = context.db_next_i256(itr, _id);
+         memcpy(id.value, _id.data(), 32);
+         return ret;
+      }
+
+      int db_previous_i256( int itr, array_ptr<char> primary, uint32_t id_size ) {
+         EOS_ASSERT( id_size == 32, db_api_exception, "invalid size of secondary key array");
+
+         key256_t _id = {0, 0};
+         int ret = context.db_previous_i256(itr, _id);
+         memcpy(primary.value, _id.data(), 32);
+         return ret;
+      }
+
+      int db_find_i256( uint64_t code, uint64_t scope, uint64_t table, array_ptr<char> id, uint32_t id_size ) {
+         EOS_ASSERT( id_size == 32, db_api_exception, "invalid size of secondary key array");
+         key256_t _id;
+         memcpy(_id.data(), id.value, 32);
+         return context.db_find_i256( code, scope, table, _id );
+      }
+
+      int db_lowerbound_i256( uint64_t code, uint64_t scope, uint64_t table, array_ptr<char> id, uint32_t id_size ) {
+         EOS_ASSERT( id_size == 32, db_api_exception, "invalid size of secondary key array");
+         key256_t _id;
+         memcpy(_id.data(), id.value, 32);
+         return context.db_lowerbound_i256( code, scope, table, _id );
+      }
+
+      int db_upperbound_i256( uint64_t code, uint64_t scope, uint64_t table, array_ptr<char> id, uint32_t id_size ) {
+         EOS_ASSERT( id_size == 32, db_api_exception, "invalid size of secondary key array");
+         key256_t _id;
+         memcpy(_id.data(), id.value, 32);
+         return context.db_upperbound_i256( code, scope, table, _id );
+      }
+
+      int db_end_i256( uint64_t code, uint64_t scope, uint64_t table ) {
+         return context.db_end_i256( code, scope, table );
       }
 
       DB_API_METHOD_WRAPPERS_SIMPLE_SECONDARY(idx64,  uint64_t)
@@ -1473,6 +1582,7 @@ class transaction_api : public context_aware_api {
       using context_aware_api::context_aware_api;
 
       void send_inline( array_ptr<char> data, uint32_t data_len ) {
+         EOS_ASSERT( !context.read_only, unaccessible_api, "Attempt to use unaccessible API" );
          //TODO: Why is this limit even needed? And why is it not consistently checked on actions in input or deferred transactions
          EOS_ASSERT( data_len < context.control.get_global_properties().configuration.max_inline_action_size, inline_action_too_big,
                     "inline action too big" );
@@ -1483,6 +1593,7 @@ class transaction_api : public context_aware_api {
       }
 
       void send_context_free_inline( array_ptr<char> data, uint32_t data_len ) {
+         EOS_ASSERT( !context.read_only, unaccessible_api, "Attempt to use unaccessible API" );
          //TODO: Why is this limit even needed? And why is it not consistently checked on actions in input or deferred transactions
          EOS_ASSERT( data_len < context.control.get_global_properties().configuration.max_inline_action_size, inline_action_too_big,
                    "inline action too big" );
@@ -1493,12 +1604,14 @@ class transaction_api : public context_aware_api {
       }
 
       void send_deferred( const uint128_t& sender_id, account_name payer, array_ptr<char> data, uint32_t data_len, uint32_t replace_existing) {
+         EOS_ASSERT( !context.read_only, unaccessible_api, "Attempt to use unaccessible API" );
          transaction trx;
          fc::raw::unpack<transaction>(data, data_len, trx);
          context.schedule_deferred_transaction(sender_id, payer, std::move(trx), replace_existing);
       }
 
       bool cancel_deferred( const unsigned __int128& val ) {
+         EOS_ASSERT( !context.read_only, unaccessible_api, "Attempt to use unaccessible API" );
          fc::uint128_t sender_id(val>>64, uint64_t(val) );
          return context.cancel_deferred_transaction( (unsigned __int128)sender_id );
       }
@@ -1527,13 +1640,16 @@ class context_free_transaction_api : public context_aware_api {
       }
 
       int expiration() {
+         EOS_ASSERT( !context.read_only, unaccessible_api, "Attempt to use unaccessible API" );
         return context.trx_context.trx.expiration.sec_since_epoch();
       }
 
       int tapos_block_num() {
+         EOS_ASSERT( !context.read_only, unaccessible_api, "Attempt to use unaccessible API" );
         return context.trx_context.trx.ref_block_num;
       }
       int tapos_block_prefix() {
+         EOS_ASSERT( !context.read_only, unaccessible_api, "Attempt to use unaccessible API" );
         return context.trx_context.trx.ref_block_prefix;
       }
 
@@ -1916,6 +2032,17 @@ REGISTER_INTRINSICS( database_api,
    (db_upperbound_i64,   int(int64_t,int64_t,int64_t,int64_t)         )
    (db_end_i64,          int(int64_t,int64_t,int64_t)                 )
 
+   (db_store_i256,        int(int64_t,int64_t,int64_t,int, int,int,int))
+   (db_update_i256,       void(int,int64_t,int,int))
+   (db_remove_i256,       void(int))
+   (db_get_i256,          int(int, int, int))
+   (db_next_i256,         int(int, int, int))
+   (db_previous_i256,     int(int, int, int))
+   (db_find_i256,         int(int64_t,int64_t,int64_t,int,int))
+   (db_lowerbound_i256,   int(int64_t,int64_t,int64_t,int,int))
+   (db_upperbound_i256,   int(int64_t,int64_t,int64_t,int,int))
+   (db_end_i256,          int(int64_t,int64_t,int64_t))
+
    DB_SECONDARY_INDEX_METHODS_SIMPLE(idx64)
    DB_SECONDARY_INDEX_METHODS_SIMPLE(idx128)
    DB_SECONDARY_INDEX_METHODS_ARRAY(idx256)
@@ -1961,9 +2088,13 @@ REGISTER_INTRINSICS(context_free_system_api,
 );
 
 REGISTER_INTRINSICS(action_api,
-   (read_action_data,       int(int, int)  )
-   (action_data_size,       int()          )
-   (current_receiver,       int64_t()      )
+   (read_action_data,         int(int, int)  )
+   (action_data_size,         int()          )
+   (current_receiver,         int64_t()      )
+   (set_action_return_value,  void(int, int) )
+   (evm_execute,              int(int, int, int, int)  )
+   (evm_recover_key,              int(int, int, int, int, int, int)  )
+   (evm_get_account_id,       int(int64_t, int, int, int, int)  )
 );
 
 REGISTER_INTRINSICS(authorization_api,

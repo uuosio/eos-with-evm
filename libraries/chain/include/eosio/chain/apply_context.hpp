@@ -171,11 +171,12 @@ class apply_context {
 
             using secondary_key_helper_t = secondary_key_helper<secondary_key_type, secondary_key_proxy_type, secondary_key_proxy_const_type>;
 
-            generic_index( apply_context& c ):context(c){}
+            generic_index( apply_context& c, bool ro=false ):context(c), read_only(ro){}
 
             int store( uint64_t scope, uint64_t table, const account_name& payer,
                        uint64_t id, secondary_key_proxy_const_type value )
             {
+               EOS_ASSERT( !read_only, table_access_violation, "can not write to read only database" );
                EOS_ASSERT( payer != account_name(), invalid_table_payer, "must specify a valid account to pay for new record" );
 
 //               context.require_write_lock( scope );
@@ -200,6 +201,7 @@ class apply_context {
             }
 
             void remove( int iterator ) {
+               EOS_ASSERT( !read_only, table_access_violation, "can not write to read only database" );
                const auto& obj = itr_cache.get( iterator );
                context.update_db_usage( obj.payer, -( config::billable_size_v<ObjectType> ) );
 
@@ -221,6 +223,7 @@ class apply_context {
             }
 
             void update( int iterator, account_name payer, secondary_key_proxy_const_type secondary ) {
+               EOS_ASSERT( !read_only, table_access_violation, "can not write to read only database" );
                const auto& obj = itr_cache.get( iterator );
 
                const auto& table_obj = itr_cache.get_table( obj.t_id );
@@ -443,12 +446,13 @@ class apply_context {
          private:
             apply_context&              context;
             iterator_cache<ObjectType>  itr_cache;
+            bool                        read_only;
       }; /// class generic_index
 
 
    /// Constructor
    public:
-      apply_context(controller& con, transaction_context& trx_ctx, uint32_t action_ordinal, uint32_t depth=0);
+      apply_context(controller& con, transaction_context& trx_ctx, uint32_t action_ordinal, uint32_t depth=0, bool ro=false);
 
    /// Execution methods:
    public:
@@ -521,6 +525,22 @@ class apply_context {
       int  db_upperbound_i64( name code, name scope, name table, uint64_t id );
       int  db_end_i64( name code, name scope, name table );
 
+      int  db_store_i256( uint64_t scope, uint64_t table, const account_name& payer, key256_t& id, const char* buffer, size_t buffer_size );
+      int  db_store_i256( uint64_t code, uint64_t scope, uint64_t table, const account_name& payer, key256_t& id, const char* buffer, size_t buffer_size );
+
+      void db_update_i256( int iterator, account_name payer, const char* buffer, size_t buffer_size , bool check_code=true);
+      void db_remove_i256( int iterator , bool check_code = true);
+      int db_get_i256( int iterator, char* buffer, size_t buffer_size );
+      int db_find_i256( uint64_t code, uint64_t scope, uint64_t table, key256_t& id );
+
+      int  db_lowerbound_i256( uint64_t code, uint64_t scope, uint64_t table, key256_t& primary );
+      int  db_upperbound_i256( uint64_t code, uint64_t scope, uint64_t table, key256_t& primary );
+
+      int db_previous_i256( int iterator, key256_t& primary );
+      int db_next_i256( int iterator, key256_t& primary );
+
+      int db_end_i256( uint64_t code, uint64_t scope, uint64_t table );
+
    private:
 
       const table_id_object* find_table( name code, name scope, name table );
@@ -553,13 +573,16 @@ class apply_context {
 
       action_name get_sender() const;
 
+      uint32_t db_get_table_count(uint64_t code, uint64_t scope, uint64_t table);
+
+
    /// Fields:
    public:
 
       controller&                   control;
       chainbase::database&          db;  ///< database where state is stored
       transaction_context&          trx_context; ///< transaction context in which the action is running
-
+      bool                          read_only = false;
    private:
       const action*                 act = nullptr; ///< action being applied
       // act pointer may be invalidated on call to trx_context.schedule_action
@@ -571,6 +594,7 @@ class apply_context {
       bool                          context_free = false;
 
    public:
+      std::vector<char>                                              action_return_value;
       generic_index<index64_object>                                  idx64;
       generic_index<index128_object>                                 idx128;
       generic_index<index256_object, uint128_t*, const uint128_t*>   idx256;
@@ -578,7 +602,7 @@ class apply_context {
       generic_index<index_long_double_object>                        idx_long_double;
 
    private:
-
+      iterator_cache<key256_value_object>    key256val_cache;
       iterator_cache<key_value_object>    keyval_cache;
       vector< std::pair<account_name, uint32_t> > _notified; ///< keeps track of new accounts to be notifed of current message
       vector<uint32_t>                    _inline_actions; ///< action_ordinals of queued inline actions
@@ -590,6 +614,8 @@ class apply_context {
 };
 
 using apply_handler = std::function<void(apply_context&)>;
+
+apply_context *get_apply_context();
 
 } } // namespace eosio::chain
 

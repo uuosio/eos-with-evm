@@ -92,6 +92,10 @@ add_library( eosio_chain
 
              trace.cpp
              transaction_metadata.cpp
+             vm_api/vm_api.cpp
+#             vm_api/vm_exceptions.cpp
+#             vm_api_ro/vm_api_ro.cpp
+#             "${CMAKE_SOURCE_DIR}/contracts/eosio.token/eosio.token.cpp"
              protocol_state_object.cpp
              protocol_feature_activation.cpp
              protocol_feature_manager.cpp
@@ -104,17 +108,31 @@ add_library( eosio_chain
              ${HEADERS}
              )
 
+set(LIBEVM4EOS ${CMAKE_BINARY_DIR}/externals/aleth/evm4eos/libevm4eos${CMAKE_SHARED_LIBRARY_SUFFIX})
+
 target_link_libraries( eosio_chain fc chainbase Logging IR WAST WASM Runtime
-                       softfloat builtins wabt ${CHAIN_EOSVM_LIBRARIES} ${LLVM_LIBS}
-                     )
+                       softfloat builtins wabt vm_api
+                       ${LIBEVM4EOS}
+                       ${CHAIN_EOSVM_LIBRARIES} ${LLVM_LIBS}
+                       )
+
 target_include_directories( eosio_chain
                             PUBLIC "${CMAKE_CURRENT_SOURCE_DIR}/include" "${CMAKE_CURRENT_BINARY_DIR}/include"
                                    "${CMAKE_CURRENT_SOURCE_DIR}/../wasm-jit/Include"
                                    "${CMAKE_CURRENT_SOURCE_DIR}/libraries/eos-vm/include"
                                    "${CMAKE_SOURCE_DIR}/libraries/wabt"
                                    "${CMAKE_BINARY_DIR}/libraries/wabt"
-                            )
-
+                                    "${CMAKE_SOURCE_DIR}/contracts/vm_api/include"
+                                    "${CMAKE_SOURCE_DIR}/contracts/vm_api"
+                              PRIVATE "${CMAKE_SOURCE_DIR}/contracts"
+                              PRIVATE "${CMAKE_BINARY_DIR}/contracts"
+                              PRIVATE ${CMAKE_SOURCE_DIR}/externals/magic_get/include
+                              PRIVATE "${CMAKE_SOURCE_DIR}/libraries/chain_api"
+                              PRIVATE "${CMAKE_SOURCE_DIR}/libraries/chain/db_api/include"
+                              PUBLIC "${CMAKE_SOURCE_DIR}/libraries/chain/db_api"
+                        )
+#add_dependencies(eosio_chain contracts_project)
+add_dependencies(eosio_chain aleth)
 if("eos-vm-oc" IN_LIST EOSIO_WASM_RUNTIMES)
    target_link_libraries(eosio_chain "-Wl,-wrap=main")
 endif()

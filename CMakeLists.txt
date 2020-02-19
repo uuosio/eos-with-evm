@@ -9,6 +9,7 @@ if ("${CMAKE_INSTALL_PREFIX}" STREQUAL "/usr/local")
 endif()
 
 list(APPEND CMAKE_MODULE_PATH "${CMAKE_CURRENT_SOURCE_DIR}/CMakeModules")
+list(APPEND CMAKE_MODULE_PATH "${CMAKE_SOURCE_DIR}/externals/aleth/cmake")
 
 if (UNIX AND APPLE)
    list(APPEND CMAKE_PREFIX_PATH "/usr/local/opt/gettext")
@@ -156,6 +157,11 @@ endif()
 
 message( STATUS "Using '${EOSIO_ROOT_KEY}' as public key for 'eosio' account" )
 
+#set(EOSIO_COMPILE_TEST_CONTRACTS TRUE)
+set(EOSIO_COMPILE_EOSIO_CONTRACTS TRUE)
+
+add_subdirectory( externals )
+add_subdirectory( contracts )
 add_subdirectory( libraries )
 add_subdirectory( plugins )
 add_subdirectory( programs )
@@ -164,9 +170,17 @@ add_subdirectory( unittests )
 add_subdirectory( tests )
 add_subdirectory( tools )
 
+option(DISABLE_WASM_SPEC_TESTS "disable building of wasm spec unit tests" OFF)
+
 if (NOT DISABLE_WASM_SPEC_TESTS)
 add_subdirectory( eosio-wasm-spec-tests/generated-tests )
 endif()
+
+if (APPLE)
+else()
+    target_compile_options(ethereum_vm PRIVATE -fPIC)
+endif()
+
 
 install_directory_permissions(DIRECTORY ${CMAKE_INSTALL_FULL_SYSCONFDIR}/eosio)
 

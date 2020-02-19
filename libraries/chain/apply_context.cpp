@@ -29,19 +29,22 @@ static inline void print_debug(account_name receiver, const action_trace& ar) {
            + prefix + ": CONSOLE OUTPUT END   =====================" );
    }
 }
+//vm_api.cpp
+void set_apply_context(apply_context *ctx);
 
-apply_context::apply_context(controller& con, transaction_context& trx_ctx, uint32_t action_ordinal, uint32_t depth)
+apply_context::apply_context(controller& con, transaction_context& trx_ctx, uint32_t action_ordinal, uint32_t depth, bool ro)
 :control(con)
-,db(con.mutable_db())
+,db(con.get_db(ro))
 ,trx_context(trx_ctx)
+,read_only(ro)
 ,recurse_depth(depth)
 ,first_receiver_action_ordinal(action_ordinal)
 ,action_ordinal(action_ordinal)
-,idx64(*this)
-,idx128(*this)
-,idx256(*this)
-,idx_double(*this)
-,idx_long_double(*this)
+,idx64(*this, ro)
+,idx128(*this, false)
+,idx256(*this, ro)
+,idx_double(*this, ro)
+,idx_long_double(*this, ro)
 {
    action_trace& trace = trx_ctx.get_action_trace(action_ordinal);
    act = &trace.act;
@@ -51,6 +54,10 @@ apply_context::apply_context(controller& con, transaction_context& trx_ctx, uint
 
 void apply_context::exec_one()
 {
+   auto cleanup = fc::make_scoped_exit([&](){
+      set_apply_context(nullptr);
+   });
+   set_apply_context(this);
    auto start = fc::time_point::now();
 
    action_receipt r;
@@ -61,6 +68,7 @@ void apply_context::exec_one()
    const account_metadata_object* receiver_account = nullptr;
    try {
       try {
+         action_return_value.clear();
          receiver_account = &db.get<account_metadata_object,by_name>( receiver );
          privileged = receiver_account->is_privileged();
          auto native = control.find_apply_handler( receiver, act->account, act->name );
@@ -139,6 +147,10 @@ void apply_context::exec_one()
 
    for( const auto& auth : act->authorization ) {
       r.auth_sequence[auth.actor] = next_auth_sequence( auth.actor );
+   }
+
+   if( control.is_builtin_activated( builtin_protocol_feature_t::action_return_value ) ) {
+      r.return_value.emplace( std::move( action_return_value ) );
    }
 
    action_trace& trace = trx_context.get_action_trace( action_ordinal );
@@ -658,6 +670,8 @@ int apply_context::db_store_i64( name scope, name table, const account_name& pay
 
 int apply_context::db_store_i64( name code, name scope, name table, const account_name& payer, uint64_t id, const char* buffer, size_t buffer_size ) {
 //   require_write_lock( scope );
+   EOS_ASSERT( !read_only, table_access_violation, "can not write to read only database" );
+
    const auto& tab = find_or_create_table( code, scope, table, payer );
    auto tableid = tab.id;
 
@@ -685,6 +699,7 @@ void apply_context::db_update_i64( int iterator, account_name payer, const char*
    const key_value_object& obj = keyval_cache.get( iterator );
 
    const auto& table_obj = keyval_cache.get_table( obj.t_id );
+   EOS_ASSERT( !read_only, table_access_violation, "can not write to read only database" );
    EOS_ASSERT( table_obj.code == receiver, table_access_violation, "db access violation" );
 
 //   require_write_lock( table_obj.scope );
@@ -712,6 +727,8 @@ void apply_context::db_update_i64( int iterator, account_name payer, const char*
 }
 
 void apply_context::db_remove_i64( int iterator ) {
+   EOS_ASSERT( !read_only, table_access_violation, "can not write to read only database" );
+
    const key_value_object& obj = keyval_cache.get( iterator );
 
    const auto& table_obj = keyval_cache.get_table( obj.t_id );
@@ -847,25 +864,241 @@ int apply_context::db_end_i64( name code, name scope, name table ) {
    return keyval_cache.cache_table( *tab );
 }
 
+uint32_t apply_context::db_get_table_count(uint64_t code, uint64_t scope, uint64_t table) {
+   const auto* tab = find_table( name(code), name(scope), name(table) );
+   if( !tab ) return 0;
+   return tab->count;
+}
+
+
+int apply_context::db_store_i256( uint64_t scope, uint64_t table, const account_name& payer, key256_t& id, const char* buffer, size_t buffer_size ) {
+   return db_store_i256( get_receiver().to_uint64_t(), scope, table, payer, id, buffer, buffer_size);
+}
+
+int apply_context::db_store_i256( uint64_t code, uint64_t scope, uint64_t table, const account_name& payer, key256_t& id, const char* buffer, size_t buffer_size ) {
+//   require_write_lock( scope );
+   EOS_ASSERT( !read_only, table_access_violation, "can not write to read only database" );
+
+   const auto& tab = find_or_create_table( name(code), name(scope), name(table), name(payer) );
+   auto tableid = tab.id;
+
+   EOS_ASSERT( payer != account_name(), invalid_table_payer, "must specify a valid account to pay for new record" );
+
+   const auto& obj = db.create<key256_value_object>( [&]( auto& o ) {
+      o.t_id        = tableid;
+      o.primary_key = id;
+      o.payer       = payer;
+      o.value.assign( buffer, buffer_size );
+   });
+
+   db.modify( tab, [&]( auto& t ) {
+     ++t.count;
+   });
+
+   int64_t billable_size = (int64_t)(buffer_size + config::billable_size_v<key256_value_object>);
+   update_db_usage( payer, billable_size);
+
+   key256val_cache.cache_table( tab );
+   return key256val_cache.add( obj );
+}
+
+void apply_context::db_update_i256( int iterator, account_name payer, const char* buffer, size_t buffer_size, bool check_code ) {
+   EOS_ASSERT( !read_only, table_access_violation, "can not write to read only database" );
+   const key256_value_object& obj = key256val_cache.get( iterator );
+
+   const auto& table_obj = key256val_cache.get_table( obj.t_id );
+   if (check_code) {
+      EOS_ASSERT( table_obj.code == get_receiver(), table_access_violation, "db access violation" );
+   }
+
+//   require_write_lock( table_obj.scope );
+
+   const int64_t overhead = config::billable_size_v<key256_value_object>;
+   int64_t old_size = (int64_t)(obj.value.size() + overhead);
+   int64_t new_size = (int64_t)(buffer_size + overhead);
+
+   if( payer == account_name() ) payer = obj.payer;
+
+   if( account_name(obj.payer) != payer ) {
+      // refund the existing payer
+      update_db_usage( obj.payer,  -(old_size) );
+      // charge the new payer
+      update_db_usage( payer,  (new_size));
+   } else if(old_size != new_size) {
+      // charge/refund the existing payer the difference
+      update_db_usage( obj.payer, new_size - old_size);
+   }
+
+   db.modify( obj, [&]( auto& o ) {
+     o.value.assign( buffer, buffer_size );
+     o.payer = payer;
+   });
+}
+
+void apply_context::db_remove_i256( int iterator, bool check_code ) {
+   EOS_ASSERT( !read_only, table_access_violation, "can not write to read only database" );
+   const key256_value_object& obj = key256val_cache.get( iterator );
+
+   const auto& table_obj = key256val_cache.get_table( obj.t_id );
+   if (check_code) {
+      EOS_ASSERT( table_obj.code == get_receiver(), table_access_violation, "db access violation" );
+   }
+
+//   require_write_lock( table_obj.scope );
+
+   update_db_usage( obj.payer,  -(obj.value.size() + config::billable_size_v<key256_value_object>) );
+
+   db.modify( table_obj, [&]( auto& t ) {
+      --t.count;
+   });
+   db.remove( obj );
+
+   if (table_obj.count == 0) {
+      remove_table(table_obj);
+   }
+
+   key256val_cache.remove( iterator );
+}
+
+int apply_context::db_get_i256( int iterator, char* buffer, size_t buffer_size ) {
+   const key256_value_object& obj = key256val_cache.get( iterator );
+
+   auto s = obj.value.size();
+   if( buffer_size == 0 ) return s;
+
+   auto copy_size = std::min( buffer_size, s );
+   memcpy( buffer, obj.value.data(), copy_size );
+
+   return copy_size;
+}
+
+int apply_context::db_find_i256( uint64_t code, uint64_t scope, uint64_t table, key256_t& id ) {
+   //require_read_lock( code, scope ); // redundant?
+
+   const auto* tab = find_table( name(code), name(scope), name(table) );
+   if( !tab ) return -1;
+
+   auto table_end_itr = key256val_cache.cache_table( *tab );
+
+   const key256_value_object* obj = db.find<key256_value_object, by_scope_primary>( boost::make_tuple( tab->id, id ) );
+   if( !obj ) return table_end_itr;
+
+   return key256val_cache.add( *obj );
+}
+
+int apply_context::db_previous_i256( int iterator, key256_t& primary ) {
+   const auto& idx = db.get_index<key256_value_index, by_scope_primary>();
+
+   if( iterator < -1 ) // is end iterator
+   {
+      auto tab = key256val_cache.find_table_by_end_iterator(iterator);
+      EOS_ASSERT( tab, invalid_table_iterator, "not a valid end iterator" );
+
+      auto itr = idx.upper_bound(tab->id);
+      if( idx.begin() == idx.end() || itr == idx.begin() ) return -1; // Empty table
+
+      --itr;
+
+      if( itr->t_id != tab->id ) return -1; // Empty table
+
+      primary = itr->primary_key;
+      return key256val_cache.add(*itr);
+   }
+
+   const auto& obj = key256val_cache.get(iterator); // Check for iterator != -1 happens in this call
+
+   auto itr = idx.iterator_to(obj);
+   if( itr == idx.begin() ) return -1; // cannot decrement past beginning iterator of table
+
+   --itr;
+
+   if( itr->t_id != obj.t_id ) return -1; // cannot decrement past beginning iterator of table
+
+   primary = itr->primary_key;
+   return key256val_cache.add(*itr);
+}
+
+int apply_context::db_next_i256( int iterator, key256_t& primary ) {
+   if( iterator < -1 ) return -1; // cannot increment past end iterator of table
+
+   const auto& obj = key256val_cache.get( iterator ); // Check for iterator != -1 happens in this call
+   const auto& idx = db.get_index<key256_value_index, by_scope_primary>();
+
+   auto itr = idx.iterator_to( obj );
+   ++itr;
+
+   if( itr == idx.end() || itr->t_id != obj.t_id ) return key256val_cache.get_end_iterator_by_table_id(obj.t_id);
+
+   primary = itr->primary_key;
+   return key256val_cache.add( *itr );
+}
+
+int apply_context::db_lowerbound_i256( uint64_t code, uint64_t scope, uint64_t table, key256_t& id ) {
+   //require_read_lock( code, scope ); // redundant?
+
+   const auto* tab = find_table( name(code), name(scope), name(table) );
+   if( !tab ) return -1;
+
+   auto table_end_itr = key256val_cache.cache_table( *tab );
+
+   const auto& idx = db.get_index<key256_value_index, by_scope_primary>();
+   auto itr = idx.lower_bound( boost::make_tuple( tab->id, id ) );
+   if( itr == idx.end() ) return table_end_itr;
+   if( itr->t_id != tab->id ) return table_end_itr;
+
+   return key256val_cache.add( *itr );
+}
+
+int apply_context::db_upperbound_i256( uint64_t code, uint64_t scope, uint64_t table, key256_t& id ) {
+   //require_read_lock( code, scope ); // redundant?
+
+   const auto* tab = find_table( name(code), name(scope), name(table) );
+   if( !tab ) return -1;
+
+   auto table_end_itr = key256val_cache.cache_table( *tab );
+
+   const auto& idx = db.get_index<key256_value_index, by_scope_primary>();
+   auto itr = idx.upper_bound( boost::make_tuple( tab->id, id ) );
+   if( itr == idx.end() ) return table_end_itr;
+   if( itr->t_id != tab->id ) return table_end_itr;
+
+   return key256val_cache.add( *itr );
+}
+
+int apply_context::db_end_i256( uint64_t code, uint64_t scope, uint64_t table ) {
+   //require_read_lock( code, scope ); // redundant?
+
+   const auto* tab = find_table( name(code), name(scope), name(table) );
+   if( !tab ) return -1;
+
+   return key256val_cache.cache_table( *tab );
+}
+
 uint64_t apply_context::next_global_sequence() {
    const auto& p = control.get_dynamic_global_properties();
-   db.modify( p, [&]( auto& dgp ) {
-      ++dgp.global_action_sequence;
-   });
+   if (!read_only) {
+      db.modify( p, [&]( auto& dgp ) {
+         ++dgp.global_action_sequence;
+      });
+   }
    return p.global_action_sequence;
 }
 
 uint64_t apply_context::next_recv_sequence( const account_metadata_object& receiver_account ) {
-   db.modify( receiver_account, [&]( auto& ra ) {
-      ++ra.recv_sequence;
-   });
+   if (!read_only) {
+      db.modify( receiver_account, [&]( auto& ra ) {
+         ++ra.recv_sequence;
+      });
+   }
    return receiver_account.recv_sequence;
 }
 uint64_t apply_context::next_auth_sequence( account_name actor ) {
    const auto& amo = db.get<account_metadata_object,by_name>( actor );
-   db.modify( amo, [&](auto& am ){
-      ++am.auth_sequence;
-   });
+   if (!read_only) {
+      db.modify( amo, [&](auto& am ){
+         ++am.auth_sequence;
+      });
+   }
    return amo.auth_sequence;
 }
 
